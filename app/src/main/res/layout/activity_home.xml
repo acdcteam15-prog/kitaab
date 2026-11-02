@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <!-- ═══ Collapsing header: greeting + search, shrinks to a toolbar ═══ -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary"
+        android:theme="@style/ToolbarTheme"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:id="@+id/collapsingToolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:contentScrim="@color/primary"
+            app:statusBarScrim="@color/primary"
+            app:titleEnabled="false"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
+
+            <LinearLayout
+                android:id="@+id/headerContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_header"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/space_m"
+                android:paddingTop="64dp"
+                android:paddingBottom="@dimen/space_m"
+                app:layout_collapseMode="parallax"
+                app:layout_collapseParallaxMultiplier="0.5">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:id="@+id/tvGreeting"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="@style/Kitaab.Text.Display"
+                            android:text="Welcome back"/>
+
+                        <TextView
+                            android:id="@+id/tvHeaderSubtitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="#CCFFFFFF"
+                            android:textSize="13sp"/>
+                    </LinearLayout>
+
+                    <!-- Daily goal ring: tap to change goal / reminder -->
+                    <com.pdfreader.app.ui.home.GoalRingView
+                        android:id="@+id/goalRing"
+                        android:layout_width="58dp"
+                        android:layout_height="58dp"
+                        android:layout_marginStart="12dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"/>
+                </LinearLayout>
+
+                <androidx.appcompat.widget.SearchView
+                    android:id="@+id/searchView"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_search"
+                    app:iconifiedByDefault="false"
+                    app:queryBackground="@android:color/transparent"
+                    app:queryHint="Search your library…"
+                    app:searchIcon="@android:drawable/ic_menu_search"/>
+            </LinearLayout>
+
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="@android:color/transparent"
+                app:layout_collapseMode="pin"
+                app:titleTextColor="@color/text_on_dark"
+                app:popupTheme="@style/OverflowMenuStyle"/>
+
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- SwipeRefresh wraps the ENTIRE scrollable content (match_parent — see pitfalls) -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scrollContent"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:id="@+id/contentRoot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:animateLayoutChanges="true"
+                android:orientation="vertical"
+                android:paddingBottom="96dp">
+
+                <!-- Update banner (shown by HomeActivity when a newer release is waiting) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardUpdateBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="@dimen/space_m"
+                    android:layout_marginTop="@dimen/space_s"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/accent">
+                    <TextView
+                        android:id="@+id/tvUpdateBanner"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp"
+                        android:textColor="@color/text_on_accent"
+                        android:textSize="14sp"
+                        android:textStyle="bold"/>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Offline banner -->
+                <TextView
+                    android:id="@+id/tvOfflineBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#CC8B0000"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:text="📶 Offline — changes will sync when you're back online"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:visibility="gone"/>
+
+                <!-- Status pills: sync + streak -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/space_m"
+                    android:paddingTop="12dp">
+
+                    <TextView
+                        android:id="@+id/tvSyncStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_pill"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="5dp"
+                        android:text="✓ All changes synced"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:id="@+id/tvStreakBanner"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_pill"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="5dp"
+                        android:textColor="@color/accent_dark"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
+                <!-- ═══ Skeleton (first load) ═══ -->
+                <LinearLayout
+                    android:id="@+id/layoutSkeleton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_m">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="168dp"
+                        android:background="@drawable/bg_skeleton"/>
+
+                    <View
+                        android:layout_width="140dp"
+                        android:layout_height="18dp"
+                        android:layout_marginTop="24dp"
+                        android:background="@drawable/bg_skeleton"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+                        <View android:layout_width="0dp" android:layout_height="220dp" android:layout_weight="1"
+                            android:layout_marginEnd="6dp" android:background="@drawable/bg_skeleton"/>
+                        <View android:layout_width="0dp" android:layout_height="220dp" android:layout_weight="1"
+                            android:layout_marginStart="6dp" android:background="@drawable/bg_skeleton"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- ═══ Hero: Continue reading ═══ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardContinueReading"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="@dimen/space_m"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:cardCornerRadius="@dimen/radius_hero"
+                    app:cardElevation="6dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_hero"
+                        android:baselineAligned="false"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/space_m">
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/ivContinueCover"
+                            android:layout_width="92dp"
+                            android:layout_height="136dp"
+                            android:background="@color/primary_light"
+                            android:elevation="4dp"
+                            android:scaleType="centerCrop"
+                            android:transitionName="book_cover"
+                            android:contentDescription="Book cover"
+                            app:shapeAppearanceOverlay="@style/Kitaab.Shape.Medium"/>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="@dimen/space_m"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="CONTINUE READING"
+                                android:letterSpacing="0.1"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="10sp"
+                                android:textStyle="bold"/>
+
+                            <TextView
+                                android:id="@+id/tvContinueTitle"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:ellipsize="end"
+                                android:maxLines="2"
+                                android:textColor="#FFFFFF"
+                                android:textSize="17sp"
+                                android:textStyle="bold"/>
+
+                            <TextView
+                                android:id="@+id/tvContinuePage"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:textColor="#CCFFFFFF"
+                                android:textSize="12sp"/>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progressContinue"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:max="100"
+                                app:indicatorColor="@color/accent"
+                                app:trackColor="#33FFFFFF"
+                                app:trackCornerRadius="4dp"
+                                app:trackThickness="6dp"
+                                app:indicatorTrackGapSize="0dp"
+                                app:trackStopIndicatorSize="0dp"/>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnContinueReading"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minHeight="40dp"
+                                android:layout_marginTop="12dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:paddingHorizontal="20dp"
+                                android:paddingVertical="8dp"
+                                android:text="Continue  ›"
+                                android:textColor="@color/text_on_accent"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                app:backgroundTint="@color/accent"
+                                app:cornerRadius="20dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ This week ═══ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardWeeklySummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="@dimen/space_m"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingVertical="14dp">
+
+                        <LinearLayout style="@style/Widget.Kitaab.StatCell">
+                            <TextView android:id="@+id/tvWeekPages" style="@style/Widget.Kitaab.StatValue" android:text="0"/>
+                            <TextView style="@style/Widget.Kitaab.StatLabel" android:text="pages this week"/>
+                        </LinearLayout>
+                        <View android:layout_width="1dp" android:layout_height="36dp"
+                            android:layout_gravity="center_vertical" android:background="@color/divider"/>
+                        <LinearLayout style="@style/Widget.Kitaab.StatCell">
+                            <TextView android:id="@+id/tvWeekMinutes" style="@style/Widget.Kitaab.StatValue" android:text="0"/>
+                            <TextView style="@style/Widget.Kitaab.StatLabel" android:text="minutes"/>
+                        </LinearLayout>
+                        <View android:layout_width="1dp" android:layout_height="36dp"
+                            android:layout_gravity="center_vertical" android:background="@color/divider"/>
+                        <LinearLayout style="@style/Widget.Kitaab.StatCell">
+                            <TextView android:id="@+id/tvWeekDays" style="@style/Widget.Kitaab.StatValue" android:text="0"/>
+                            <TextView style="@style/Widget.Kitaab.StatLabel" android:text="days active"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ Row: Currently reading ═══ -->
+                <LinearLayout
+                    android:id="@+id/sectionReading"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        style="@style/Widget.Kitaab.SectionHeader"
+                        android:text="Currently reading"/>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvReading"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clipToPadding="false"
+                        android:nestedScrollingEnabled="false"
+                        android:paddingHorizontal="12dp"/>
+                </LinearLayout>
+
+                <!-- ═══ Row: Finished shelf ═══ -->
+                <LinearLayout
+                    android:id="@+id/sectionFinished"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+                        <TextView
+                            style="@style/Widget.Kitaab.SectionHeader"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:text="🏆 Finished"/>
+                        <TextView
+                            android:id="@+id/tvFinishedHeader"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:padding="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:text="See all ›"
+                            android:textColor="@color/brand"
+                            android:textSize="13sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvFinishedBooks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clipToPadding="false"
+                        android:nestedScrollingEnabled="false"
+                        android:paddingHorizontal="12dp"/>
+                </LinearLayout>
+
+                <!-- ═══ All books ═══ -->
+                <LinearLayout
+                    android:id="@+id/sectionLibrary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView
+                        style="@style/Widget.Kitaab.SectionHeader"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="Library"/>
+                    <TextView
+                        android:id="@+id/tvBookCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginEnd="@dimen/space_m"
+                        android:textAppearance="@style/Kitaab.Text.Caption"/>
+                </LinearLayout>
+
+                <!-- Smart shelves: filters that fill themselves -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:clipToPadding="false"
+                    android:scrollbars="none">
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipsSmart"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipSpacingHorizontal="8dp"
+                        app:selectionRequired="true"
+                        app:singleLine="true"
+                        app:singleSelection="true"/>
+                </HorizontalScrollView>
+
+                <!-- Empty state -->
+                <LinearLayout
+                    android:id="@+id/layoutEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="32dp"
+                    android:visibility="gone">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:text="📚"
+                        android:textSize="56sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/no_books_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="20sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/tvEmptySubtitle"
+                        android:layout_width="280dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:lineSpacingExtra="4dp"
+                        android:text="@string/no_books_body"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"/>
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvBooks"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:paddingHorizontal="10dp"/>
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <!-- + : pick a PDF → (optionally preview/edit) → upload to Drive -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAdd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/space_m"
+        android:contentDescription="Add PDF"
+        android:src="@drawable/ic_add"
+        app:backgroundTint="@color/accent"
+        app:tint="@color/text_on_accent"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

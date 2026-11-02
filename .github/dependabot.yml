@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      androidx:
+        patterns: ["androidx.*"]
+    ignore:
+      # 22.x removes the legacy Google Sign-In API that Kitaab uses for login and Google Drive.
+      # Lift this when the sign-in code has been moved to Credential Manager + AuthorizationClient.
+      - dependency-name: "com.google.android.gms:play-services-auth"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

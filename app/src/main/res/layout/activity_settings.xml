@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="@color/background">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/ToolbarTheme">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primary"
+            app:titleTextColor="@color/text_on_dark"
+            app:popupTheme="@style/OverflowMenuStyle"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="ACCOUNT" android:textSize="11sp" android:textStyle="bold"
+                android:textColor="@color/accent" android:letterSpacing="0.1"
+                android:layout_marginBottom="6dp" android:layout_marginTop="8dp"/>
+            <TextView android:id="@+id/tvCurrentUser"
+                android:layout_width="match_parent" android:layout_height="48dp"
+                android:textSize="15sp" android:gravity="center_vertical"
+                android:textColor="@color/text_primary"/>
+
+            <LinearLayout android:id="@+id/rowUpdates"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:clickable="true" android:focusable="true"
+                android:background="?attr/selectableItemBackground">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/upd_title"
+                    android:textSize="15sp" android:textColor="@color/text_primary"/>
+                <TextView android:id="@+id/tvUpdatesSummary"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textSize="13sp" android:textColor="@color/text_secondary"/>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/divider" android:layout_marginVertical="12dp"/>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="READING" android:textSize="11sp" android:textStyle="bold"
+                android:textColor="@color/accent" android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/keep_screen_on"
+                    android:textSize="15sp" android:textColor="@color/text_primary"/>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchKeepScreenOn"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/lock_rotation"
+                    android:textSize="15sp" android:textColor="@color/text_primary"/>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchLockRotation"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/show_page_number"
+                    android:textSize="15sp" android:textColor="@color/text_primary"/>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchShowPageNumber"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/reading_stats"
+                    android:textSize="15sp" android:textColor="@color/text_primary"/>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchReadingStats"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/scroll_mode" android:textSize="15sp"
+                android:textColor="@color/text_primary"
+                android:layout_marginTop="8dp" android:layout_marginBottom="4dp"/>
+            <RadioGroup android:id="@+id/rgScrollMode"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton android:id="@+id/rbVertical" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="@string/vertical" android:textColor="@color/text_primary"/>
+                <RadioButton android:id="@+id/rbHorizontal" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="@string/horizontal" android:textColor="@color/text_primary"/>
+            </RadioGroup>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/divider" android:layout_marginVertical="12dp"/>
+
+            <!-- Auto Night Mode -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="DISPLAY" android:textSize="11sp" android:textStyle="bold"
+                android:textColor="@color/accent" android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="🌙 Auto Night Mode"
+                    android:textSize="15sp" android:textColor="@color/text_primary"/>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchAutoNightMode"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <!-- Night mode time picker — shown only when auto night mode is on -->
+            <LinearLayout android:id="@+id/layoutNightModeTime"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:padding="8dp"
+                android:background="@color/surface_variant">
+
+                <TextView android:id="@+id/tvNightModeTime"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:textSize="14sp" android:textColor="@color/text_primary"
+                    android:layout_marginBottom="8dp"/>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSetNightStart"
+                        android:layout_width="0dp" android:layout_height="44dp"
+                        android:layout_weight="1" android:text="🌙 Start 21:00"
+                        android:textSize="13sp" android:textStyle="bold"
+                        android:textColor="@color/on_brand" app:backgroundTint="@color/brand"
+                        app:cornerRadius="18dp" android:layout_marginEnd="8dp"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSetNightEnd"
+                        android:layout_width="0dp" android:layout_height="44dp"
+                        android:layout_weight="1" android:text="☀️ End 07:00"
+                        android:textSize="13sp" android:textStyle="bold"
+                        android:textColor="@color/on_brand" app:backgroundTint="@color/brand"
+                        app:cornerRadius="18dp"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView android:id="@+id/tvBrightness"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="15sp" android:textColor="@color/text_primary"
+                android:layout_marginTop="12dp" android:layout_marginBottom="6dp"/>
+            <SeekBar android:id="@+id/seekbarBrightness"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:max="100" android:progressTint="@color/accent" android:thumbTint="@color/accent"/>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/divider" android:layout_marginVertical="12dp"/>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="SYNC" android:textSize="11sp" android:textStyle="bold"
+                android:textColor="@color/accent" android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/auto_sync"
+                    android:textSize="15sp" android:textColor="@color/text_primary"/>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchAutoSync"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/divider" android:layout_marginVertical="12dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnResetProgress"
+                android:layout_width="match_parent" android:layout_height="48dp"
+                android:text="Clear Local Progress"
+                android:backgroundTint="#FFDDDD" android:textColor="#CC0000"
+                app:cornerRadius="12dp" android:layout_marginBottom="12dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnClearWeekly"
+                android:layout_width="match_parent" android:layout_height="48dp"
+                android:text="Clear Weekly Summary"
+                android:backgroundTint="#FFF3E0" android:textColor="#E65100"
+                app:cornerRadius="12dp" android:layout_marginBottom="32dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

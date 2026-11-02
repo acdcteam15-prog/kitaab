@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kitaab</string>
+    <string name="sign_in_google">Continue with Google</string>
+    <string name="select_profile">Who\'s reading today?</string>
+    <string name="no_books_title">No books found</string>
+    <string name="no_books_body">Make sure your Google Drive has a Books/YourName/ folder with PDF files inside.</string>
+    <string name="settings">Settings</string>
+    <string name="keep_screen_on">Keep Screen On</string>
+    <string name="lock_rotation">Lock Rotation (Portrait)</string>
+    <string name="auto_sync">Sync Progress to Cloud</string>
+    <string name="scroll_mode">Scroll Direction</string>
+    <string name="vertical">Vertical scroll</string>
+    <string name="horizontal">Horizontal (page flip)</string>
+    <string name="brightness">Screen Brightness</string>
+    <string name="show_page_number">Show Page Number Overlay</string>
+    <string name="reading_stats">Track Reading Time</string>
+    <string name="no_bookmarks">No bookmarks yet.\nTap the bookmark icon while reading.</string>
+    <string name="widget_description">Your current book, progress, today\'s goal and streak</string>
+
+    <!-- In-app updates -->
+    <string name="upd_title">App updates</string>
+    <string name="upd_channel">App updates</string>
+    <string name="upd_installed">Installed: %1$s (build %2$d)</string>
+    <string name="upd_checking">Checking for updates…</string>
+    <string name="upd_up_to_date">Kitaab is up to date</string>
+    <string name="upd_available">Kitaab %1$s is available</string>
+    <string name="upd_not_configured">Updates work in the version built by GitHub. This copy was built on a computer, so it cannot check for updates.</string>
+    <string name="upd_required">This update is required.</string>
+    <string name="upd_skipped">You skipped this version. You can still install it.</string>
+    <string name="upd_whats_new">What's new</string>
+    <string name="upd_whats_in_this">What's in this version</string>
+    <string name="upd_install">Download and install</string>
+    <string name="upd_skip">Skip this version</string>
+    <string name="upd_check">Check for updates</string>
+    <string name="upd_downloading">Downloading… %1$d%%</string>
+    <string name="upd_installing">Installing… Android may ask you to confirm.</string>
+    <string name="upd_allow_title">Allow installing from Kitaab</string>
+    <string name="upd_allow_body">Android needs your OK once before Kitaab can install its own updates. Tap the button, switch on "Allow from this source", then press Back to return here. The update continues by itself.</string>
+    <string name="upd_allow_button">Open the Android setting</string>
+    <string name="upd_no_settings">Could not open the Android setting. Open Settings, Apps, Kitaab, Install unknown apps.</string>
+    <string name="upd_no_installer">This phone has no app installer screen.</string>
+    <string name="upd_failed">The update failed. Please try again.</string>
+    <string name="upd_auto_check">Check for updates automatically</string>
+    <string name="upd_token_title">GitHub token (optional)</string>
+    <string name="upd_token_hint">Only needed when the update repository is private. Leave empty otherwise.</string>
+    <string name="upd_token_field">Token</string>
+    <string name="upd_token_save">Save token</string>
+    <string name="upd_token_saved">Token saved</string>
+    <string name="upd_banner">Update available: Kitaab %1$s. Tap to install.</string>
+    <string name="upd_banner_required">Required update: Kitaab %1$s. Tap to install.</string>
+    <string name="upd_notif_title">Kitaab %1$s is available</string>
+    <string name="upd_notif_title_required">Required update: Kitaab %1$s</string>
+    <string name="upd_notif_text">Tap to read what's new and install.</string>
+    <string name="upd_notif_ready">Already downloaded. Tap to install.</string>
+    <string name="upd_updated_to">Kitaab was updated to %1$s</string>
+    <string name="upd_menu_summary">Kitaab %1$s</string>
+</resources>

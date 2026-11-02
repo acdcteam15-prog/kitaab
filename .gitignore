@@ -1,0 +1,29 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+app/build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.kotlin/
+
+# Secrets and wizard output - never upload these
+*.jks
+*.keystore
+keystore.properties
+APK/
+build-error.txt
+setup/state.json
+setup/wizard.log
+
+# A stray copy of some files that was inside an older zip
+/Booky/
