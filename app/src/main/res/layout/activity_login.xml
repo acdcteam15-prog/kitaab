@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@color/primary"
+    android:padding="32dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📖"
+        android:textSize="72sp"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textColor="@color/text_on_dark"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your cross-device reading companion"
+        android:textColor="#99FFFFFF"
+        android:textSize="14sp"
+        android:layout_marginBottom="48dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/select_profile"
+        android:textColor="#CCFFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <com.google.android.material.chip.ChipGroup
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipBader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="  Bader  "
+            style="@style/ChipStyle"
+            app:chipBackgroundColor="@color/primary_light"
+            android:textColor="@color/text_on_dark"
+            app:checkedIconVisible="true"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipShirin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="  Shirin  "
+            style="@style/ChipStyle"
+            app:chipBackgroundColor="@color/primary_light"
+            android:textColor="@color/text_on_dark"
+            app:checkedIconVisible="true"/>
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <TextView
+        android:id="@+id/tvProfileHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFDD88"
+        android:textSize="13sp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSignIn"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/sign_in_google"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:backgroundTint="@color/accent"
+        android:textColor="@color/text_on_accent"
+        app:cornerRadius="28dp"
+        android:layout_marginTop="8dp"/>
+
+    <ProgressBar
+        android:id="@+id/progressSignIn"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginTop="16dp"
+        android:indeterminateTint="@color/accent"
+        android:visibility="gone"/>
+
+</LinearLayout>

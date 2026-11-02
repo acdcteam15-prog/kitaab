@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Page-curl layer wraps the PDF view: it only takes over single-finger turn drags,
+         everything else (tap, long-press, pinch, double-tap) still reaches PDFView -->
+    <com.pdfreader.app.ui.reader.PageCurlLayout
+        android:id="@+id/curlLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.github.barteksc.pdfviewer.PDFView
+            android:id="@+id/pdfView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </com.pdfreader.app.ui.reader.PageCurlLayout>
+
+    <!-- Blue-light / colour filter overlay -->
+    <View
+        android:id="@+id/blueFilterOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:clickable="false"
+        android:focusable="false"/>
+
+    <!-- ── Reading position pin overlay ─────────────────────────────────── -->
+    <!-- "Where I stopped" marker (ribbon / line / highlight) — never takes touches -->
+    <com.pdfreader.app.ui.reader.PinMarkerView
+        android:id="@+id/pinMarker"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="5dp"/>
+
+    <!-- Highlighter mode: drag across lines (visible only in that mode) -->
+    <com.pdfreader.app.ui.reader.HighlightDrawView
+        android:id="@+id/highlightOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="6dp"/>
+
+    <!-- Footnote line editor: drag the line to where the footnotes begin -->
+    <com.pdfreader.app.ui.reader.FootnoteLineEditorView
+        android:id="@+id/footnoteEditor"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="7dp"
+        android:visibility="gone"/>
+
+    <!-- Highlighter toolbar: colours + Done -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/highlightBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="100dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="#F21C1B2E"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="12dp">
+        <LinearLayout
+            android:id="@+id/highlightColors"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="6dp"
+            android:paddingVertical="6dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:text="🖍 Drag across lines"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"/>
+            <!-- colour dots are added in code -->
+            <TextView
+                android:id="@+id/tvHighlightDone"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="Done"
+                android:textColor="#F5A623"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Footnote line editor: hint + buttons -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/footnoteBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="28dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="#F21C1B2E"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="12dp">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="10dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="4dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📎 Drag the line to where the footnotes start"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"/>
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/tvFnCancel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="Cancel"
+                    android:textColor="#BBFFFFFF"
+                    android:textSize="13sp"/>
+                <TextView
+                    android:id="@+id/tvFnNone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="None here"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"/>
+                <TextView
+                    android:id="@+id/tvFnAll"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="All pages"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"/>
+                <TextView
+                    android:id="@+id/tvFnThis"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="This page"
+                    android:textColor="#F5A623"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Extra dimming below the screen minimum (night reading) -->
+    <View
+        android:id="@+id/dimOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone"/>
+
+    <!-- Brightness HUD: shown while swiping the screen edge -->
+    <LinearLayout
+        android:id="@+id/hudBrightness"
+        android:layout_width="72dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:alpha="0"
+        android:background="@drawable/bg_hud"
+        android:elevation="12dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="14dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvHudIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔆"
+            android:textSize="20sp"/>
+
+        <FrameLayout
+            android:layout_width="10dp"
+            android:layout_height="170dp"
+            android:layout_marginVertical="10dp"
+            android:background="@drawable/bg_hud_track"
+            android:clipToOutline="true">
+            <View
+                android:id="@+id/hudFill"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#F5A623"/>
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tvHudValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <!-- Top toolbar — dark popup theme so menu text is white -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="?attr/actionBarSize"
+        android:background="@drawable/bg_reader_top"
+        android:elevation="4dp"
+        android:theme="@style/ToolbarTheme"
+        app:popupTheme="@style/DarkPopupTheme"/>
+
+    <!-- Seekbar page preview: floats above the thumb while dragging -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardSeekPreview"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:alpha="0"
+        android:visibility="gone"
+        app:cardBackgroundColor="#F21C1B2E"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="10dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="6dp">
+            <ImageView
+                android:id="@+id/ivSeekPreview"
+                android:layout_width="108dp"
+                android:layout_height="150dp"
+                android:background="#FFFFFF"
+                android:scaleType="fitCenter"
+                android:contentDescription="Page preview"/>
+            <TextView
+                android:id="@+id/tvSeekPreview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Bottom bar -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_reader_bottom"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="22dp"
+        android:paddingBottom="16dp">
+
+        <SeekBar
+            android:id="@+id/seekbarPages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:progressTint="#F5A623"
+            android:thumbTint="#F5A623"
+            android:progressBackgroundTint="#44FFFFFF"/>
+
+        <TextView
+            android:id="@+id/tvPageInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp"
+            android:layout_marginTop="6dp"/>
+
+    </LinearLayout>
+
+    <!-- Bookmarks side panel -->
+    <LinearLayout
+        android:id="@+id/panelBookmarks"
+        android:layout_width="280dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:background="#EE1C1B2E"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bookmarks"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"
+            android:paddingTop="52dp"/>
+
+        <TextView
+            android:id="@+id/tvNoBookmarks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No bookmarks yet.\nTap the bookmark icon while reading."
+            android:textColor="#88FFFFFF"
+            android:textSize="13sp"
+            android:lineSpacingExtra="4dp"
+            android:visibility="gone"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvBookmarks"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+    </LinearLayout>
+
+</FrameLayout>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal toolbar: bookmark + one button that opens the reader sheet -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/action_bookmark"
+        android:title="Bookmark Page"
+        android:icon="@drawable/ic_bookmark_outline"
+        app:showAsAction="always"/>
+    <item android:id="@+id/action_menu"
+        android:title="Reading options"
+        android:icon="@drawable/ic_tune"
+        app:showAsAction="always"/>
+</menu>

@@ -221,6 +221,11 @@ function Ensure-GitIdentity {
 function Push-Project([string]$full) {
   Head 'Uploading the project to GitHub'
   $url = 'https://github.com/' + $full + '.git'
+  $need = @('gradlew', 'gradlew.bat', 'gradle\wrapper\gradle-wrapper.jar', 'gradle\wrapper\gradle-wrapper.properties', 'settings.gradle.kts', 'app\build.gradle.kts', 'version.properties')
+  $missing = @($need | Where-Object { -not (Test-Path (Join-Path $ProjectDir $_)) })
+  if ($missing.Count -gt 0) {
+    throw ('These project files are missing next to START-HERE.bat: ' + ($missing -join ', ') + '. START-HERE.bat must sit in the same folder as the app folder and gradlew. Paste the new files over your WHOLE project folder and run again.')
+  }
   if (-not (Get-GitDirOk)) {
     [void](Run-Git @('init'))
     Ok 'Created a local git folder.'

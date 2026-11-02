@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary"
+        android:theme="@style/ToolbarTheme"
+        app:elevation="0dp">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:titleTextColor="@color/text_on_dark"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
+
+            <!-- ═══ Year in books ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardYear"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="@dimen/radius_hero"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_hero"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+                        <TextView
+                            android:id="@+id/tvYearTitle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textColor="#FFFFFF"
+                            android:textSize="20sp"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:id="@+id/tvYearPrev"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:gravity="center"
+                            android:text="‹"
+                            android:textColor="#FFFFFF"
+                            android:textSize="24sp"/>
+                        <TextView
+                            android:id="@+id/tvYearNext"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:gravity="center"
+                            android:text="›"
+                            android:textColor="#FFFFFF"
+                            android:textSize="24sp"/>
+                    </LinearLayout>
+
+                    <!-- Big numbers -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+                        <LinearLayout style="@style/Widget.Kitaab.StatCell">
+                            <TextView android:id="@+id/tvYBooks" style="@style/Widget.Kitaab.YearValue"/>
+                            <TextView style="@style/Widget.Kitaab.YearLabel" android:text="books"/>
+                        </LinearLayout>
+                        <LinearLayout style="@style/Widget.Kitaab.StatCell">
+                            <TextView android:id="@+id/tvYPages" style="@style/Widget.Kitaab.YearValue"/>
+                            <TextView style="@style/Widget.Kitaab.YearLabel" android:text="pages"/>
+                        </LinearLayout>
+                        <LinearLayout style="@style/Widget.Kitaab.StatCell">
+                            <TextView android:id="@+id/tvYHours" style="@style/Widget.Kitaab.YearValue"/>
+                            <TextView style="@style/Widget.Kitaab.YearLabel" android:text="hours"/>
+                        </LinearLayout>
+                        <LinearLayout style="@style/Widget.Kitaab.StatCell">
+                            <TextView android:id="@+id/tvYStreak" style="@style/Widget.Kitaab.YearValue"/>
+                            <TextView style="@style/Widget.Kitaab.YearLabel" android:text="best streak"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Books per month -->
+                    <LinearLayout
+                        android:id="@+id/layoutMonths"
+                        android:layout_width="match_parent"
+                        android:layout_height="84dp"
+                        android:layout_marginTop="16dp"
+                        android:gravity="bottom"
+                        android:orientation="horizontal"/>
+                    <LinearLayout
+                        android:id="@+id/layoutMonthLabels"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal"/>
+
+                    <TextView
+                        android:id="@+id/tvYearHighlight"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="#D9FFFFFF"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ Bookcase ═══ -->
+            <TextView
+                style="@style/Widget.Kitaab.SectionHeader"
+                android:paddingTop="4dp"
+                android:text="Your bookcase"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvFinished"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingHorizontal="12dp"
+                android:layoutAnimation="@anim/layout_fade_up"/>
+
+            <LinearLayout
+                android:id="@+id/layoutEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🏆"
+                    android:textSize="56sp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="No finished books yet"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+                <TextView
+                    android:layout_width="260dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:text="When you reach the last page, choose “Move to Finished”. The record stays here even after you delete the PDF."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

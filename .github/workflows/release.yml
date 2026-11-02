@@ -40,6 +40,16 @@ jobs:
           packages: platform-tools
 
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.8.2'
+
+      # Safety net: if the Gradle wrapper files did not get uploaded, create them here.
+      - name: Create the Gradle wrapper if it is missing
+        run: |
+          if [ ! -f gradlew ] || [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "::warning::gradlew or the wrapper jar is missing from the repository; generating it."
+            gradle wrapper --gradle-version 9.8.2
+          fi
 
       - name: Make gradlew executable
         run: chmod +x gradlew

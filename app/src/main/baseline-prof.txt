@@ -1,0 +1,12 @@
+# Baseline profile: code AOT-compiled at install for faster startup and smoother scrolling.
+# Covers app start → Home → opening a book → turning pages.
+HSPLcom/pdfreader/app/KitaabApplication;->**(**)**
+HSPLcom/pdfreader/app/ui/home/**;->**(**)**
+HSPLcom/pdfreader/app/ui/reader/**;->**(**)**
+HSPLcom/pdfreader/app/data/**;->**(**)**
+HSPLcom/pdfreader/app/sync/**;->**(**)**
+HSPLcom/pdfreader/app/utils/**;->**(**)**
+HSPLcom/github/barteksc/pdfviewer/**;->**(**)**
+HSPLandroidx/recyclerview/widget/**;->**(**)**
+HSPLcom/bumptech/glide/**;->**(**)**
+Lcom/pdfreader/app/**;

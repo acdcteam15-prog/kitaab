@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft fade from the top edge: bars feel light over the page -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:angle="270" android:startColor="#F21C1B2E" android:centerColor="#D91C1B2E" android:endColor="#B31C1B2E"/>
+</shape>

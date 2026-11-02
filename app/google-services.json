@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "856189749075",
+    "project_id": "pdfreaderapp-e823a",
+    "storage_bucket": "pdfreaderapp-e823a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:856189749075:android:b33660992f00cbabe983a6",
+        "android_client_info": {
+          "package_name": "com.pdfreader.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwyEomNcKuJo8EhvZ6L1mIuyudn68A_bo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
