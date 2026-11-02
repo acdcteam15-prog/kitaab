@@ -28,8 +28,8 @@
     <string name="upd_not_configured">Updates work in the version built by GitHub. This copy was built on a computer, so it cannot check for updates.</string>
     <string name="upd_required">This update is required.</string>
     <string name="upd_skipped">You skipped this version. You can still install it.</string>
-    <string name="upd_whats_new">What's new</string>
-    <string name="upd_whats_in_this">What's in this version</string>
+    <string name="upd_whats_new">What\'s new</string>
+    <string name="upd_whats_in_this">What\'s in this version</string>
     <string name="upd_install">Download and install</string>
     <string name="upd_skip">Skip this version</string>
     <string name="upd_check">Check for updates</string>
@@ -51,7 +51,7 @@
     <string name="upd_banner_required">Required update: Kitaab %1$s. Tap to install.</string>
     <string name="upd_notif_title">Kitaab %1$s is available</string>
     <string name="upd_notif_title_required">Required update: Kitaab %1$s</string>
-    <string name="upd_notif_text">Tap to read what's new and install.</string>
+    <string name="upd_notif_text">Tap to read what\'s new and install.</string>
     <string name="upd_notif_ready">Already downloaded. Tap to install.</string>
     <string name="upd_updated_to">Kitaab was updated to %1$s</string>
     <string name="upd_menu_summary">Kitaab %1$s</string>
