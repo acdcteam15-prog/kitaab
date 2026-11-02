@@ -48,10 +48,10 @@ jobs:
         run: chmod +x gradlew
 
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: bash .github/gradle.sh testDebugUnitTest
 
       - name: Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: bash .github/gradle.sh assembleDebug
 
       - uses: actions/upload-artifact@v7
         with:

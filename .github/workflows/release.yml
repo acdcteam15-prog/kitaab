@@ -66,10 +66,10 @@ jobs:
           echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: bash .github/gradle.sh testDebugUnitTest
 
       - name: Signed release APK
-        run: ./gradlew assembleRelease --stacktrace
+        run: bash .github/gradle.sh assembleRelease
 
       - name: Name the APK, write the checksum, verify the signature
         id: pack

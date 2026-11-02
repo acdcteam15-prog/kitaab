@@ -485,17 +485,25 @@ function Watch-Run([string]$full, [string]$id) {
 
 function Save-BuildError([string]$full, [string]$id) {
   $r = Invoke-Native 'gh' @('run', 'view', $id, '--repo', $full, '--log-failed')
-  $all = @($r.Lines)
+  $clean = New-Object System.Collections.Generic.List[string]
+  foreach ($l in @($r.Lines)) {
+    $t = ($l -replace '^[^\t]*\t[^\t]*\t\d{4}-\S*Z ?', '').TrimEnd()
+    if ($t -match '^\s+at ' -or $t -match '^\s*\.\.\. \d+ more') { continue }
+    $clean.Add($t)
+  }
   $keep = New-Object System.Collections.Generic.List[string]
-  $pat = '(?i)(^|\s)(e:\s|error:|error\b|FAILED|FAILURE|What went wrong|Execution failed|Unresolved reference|Cannot access|Type mismatch|Could not resolve|Could not find|AAPT|lint|Exception|\.kt:\d+|\.xml:\d+|Caused by|BUILD FAILED|::error)'
-  foreach ($l in $all) {
-    $t = ($l -replace '^\S+\s+\S+\s+\d{4}-\d{2}-\d{2}T[\d:.]+Z\s?', '')
-    if ($t -match $pat -and $t -notmatch '(?i)^\s*warning:|w:\s') { $keep.Add($t.TrimEnd()) }
+  $ctx = 0
+  $pat = '(?i)(^e:\s|error:|FAILED|Execution failed|Unresolved reference|Type mismatch|Could not|AAPT|\.kt:\d+|\.xml:\d+|Caused by|BUILD FAILED|::error|^\s*>\s)'
+  foreach ($t in $clean) {
+    if ($t -match 'What went wrong') { $ctx = 14 }
+    if ($ctx -gt 0) { $keep.Add($t); $ctx--; continue }
+    if ($t -match $pat) { $keep.Add($t) }
   }
   $head = @('Kitaab build error report', ('Repository: ' + $full), ('Run: ' + $id), ('Link: https://github.com/' + $full + '/actions/runs/' + $id), ('Time: ' + (Get-Date -Format 's')), '')
-  $body = $keep | Select-Object -Unique | Select-Object -First 80
-  if (-not $body -or @($body).Count -eq 0) { $body = $all | Select-Object -Last 60 }
-  Set-Content -Path $ErrorFile -Value ($head + $body) -Encoding ASCII
+  $body = @($keep | Select-Object -Unique | Select-Object -First 90)
+  $tail = @($clean | Select-Object -Last 25)
+  $out = $head + $body + @('', '--- last lines of the log ---') + $tail
+  Set-Content -Path $ErrorFile -Value $out -Encoding ASCII
   Bad ('The build failed. A short error report was saved here:')
   Info $ErrorFile
   Info 'Send me the text of build-error.txt and I will fix it.'
