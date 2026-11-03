@@ -5,7 +5,7 @@ import androidx.annotation.AttrRes
 import androidx.appcompat.app.AppCompatActivity
 
 /** Every screen extends this: it applies the chosen colour theme and follows a theme change made in Settings. */
-abstract class BaseActivity : com.pdfreader.app.ui.base.BaseActivity() {
+abstract class BaseActivity : AppCompatActivity() {
 
     private var appliedTheme = ""
 
