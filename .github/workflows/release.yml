@@ -65,6 +65,18 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
           echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # google-services.json holds the Firebase / Google API key. It is NOT in the repository: it is rebuilt
+      # here from a GitHub secret that START-HERE.bat uploads from app\google-services.json on your PC.
+      - name: Restore google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "::error::The secret GOOGLE_SERVICES_JSON_BASE64 is missing. Put your NEW google-services.json in the app folder and run START-HERE.bat."
+            exit 1
+          fi
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+
       - name: Unit tests
         run: bash .github/gradle.sh testDebugUnitTest
 
@@ -92,6 +104,11 @@ jobs:
           fi
           "$APKSIGNER" verify --verbose --print-certs "dist/$NAME" | tee dist/signature.txt
           grep -q "Verifies" dist/signature.txt
+
+          # The certificate fingerprint Google needs for the OAuth client (Cloud console / Firebase)
+          SHA1=$(grep -i -m1 'SHA-1 digest' dist/signature.txt | sed 's/.*: *//' | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')
+          echo "::notice title=Signing certificate SHA-1::${SHA1}"
+          echo "Signing certificate SHA-1: ${SHA1}" >> "$GITHUB_STEP_SUMMARY"
 
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "code=$CODE" >> "$GITHUB_OUTPUT"

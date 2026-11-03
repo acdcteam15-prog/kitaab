@@ -55,4 +55,26 @@
     <string name="upd_notif_ready">Already downloaded. Tap to install.</string>
     <string name="upd_updated_to">Kitaab was updated to %1$s</string>
     <string name="upd_menu_summary">Kitaab %1$s</string>
+
+    <!-- Intro, sign-in and name -->
+    <string name="intro_skip">Skip</string>
+    <string name="intro_next">Next</string>
+    <string name="intro_start">Get started</string>
+    <string name="intro_1_title">Your books, everywhere</string>
+    <string name="intro_1_body">Kitaab keeps your PDF books and your reading progress in your own Google Drive.</string>
+    <string name="intro_2_title">Sign in with Google</string>
+    <string name="intro_2_body">Sign in once. Kitaab finds the folder \"books\" in your Drive, or creates it for you.</string>
+    <string name="intro_3_title">Your own folder</string>
+    <string name="intro_3_body">Type your name. Your books are kept in books / your name, together with one file, progress.json, that holds your reading progress.</string>
+    <string name="intro_4_title">Continue on any phone</string>
+    <string name="intro_4_body">Open a book on another phone and carry on from the same page. Add PDFs from the app, or copy them into your folder in Google Drive.</string>
+    <string name="login_hint">Sign in with your Google account. Your books stay in your own Google Drive.</string>
+    <string name="login_name_title">What is your name?</string>
+    <string name="login_name_body">Your books are kept in the Drive folder books / your name.</string>
+    <string name="login_name_field">Your name</string>
+    <string name="login_continue">Continue</string>
+    <string name="login_name_empty">Please type your name.</string>
+    <string name="login_name_long">Please use 40 letters or fewer.</string>
+    <string name="login_name_chars">Please do not use these characters: / \\ : * ? \" &lt; &gt; |</string>
+    <string name="login_folder_failed">Could not prepare your Drive folder: %1$s</string>
 </resources>

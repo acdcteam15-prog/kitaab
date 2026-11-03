@@ -17,6 +17,7 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::
 
 # ------------------------------------------------------------------ constants
 $AppName      = 'Kitaab'
+$WizardVersion = '2026-11-03.3'
 $WorkflowFile = 'release.yml'
 $ProjectDir   = Split-Path -Parent $PSScriptRoot
 $ApkDir       = Join-Path $ProjectDir 'APK'
@@ -25,6 +26,16 @@ $StateFile    = Join-Path $PSScriptRoot 'state.json'
 $LogFile      = Join-Path $PSScriptRoot 'wizard.log'
 $KeyDir       = Join-Path $env:USERPROFILE '.kitaab-signing'
 $KeyFile      = Join-Path $KeyDir 'kitaab-release.jks'
+$ToolsBase    = $env:LOCALAPPDATA
+if (-not $ToolsBase) { $ToolsBase = $env:USERPROFILE }
+$ToolsDir     = Join-Path $ToolsBase 'KitaabSetup\tools'   # outside the project, never uploaded
+$FirebaseExe   = Join-Path $ToolsDir 'firebase.exe'
+$PackageName  = 'com.pdfreader.app'
+$GoogleJson   = Join-Path $ProjectDir 'app\google-services.json'
+# Taken from the google-services.json that came with the project (used when that file is not on this PC)
+$DefaultFirebaseProject = 'pdfreaderapp-e823a'
+$DefaultFirebaseAppId   = '1:856189749075:android:b33660992f00cbabe983a6'
+$Script:FbAccount = ''
 
 # ------------------------------------------------------------------ output helpers
 function Write-Log([string]$m) {
@@ -216,6 +227,63 @@ function Ensure-GitIdentity {
   }
 }
 
+# Lines that must be in .gitignore (secrets, downloads and wizard output never go to GitHub).
+function Ensure-GitIgnore {
+  $f = Join-Path $ProjectDir '.gitignore'
+  $need = @('*.jks', '*.keystore', 'keystore.properties', 'app/google-services.json', 'APK/', 'build-error.txt', 'gradle.log', 'setup/state.json', 'setup/wizard.log', 'setup/tools/', '/Booky/')
+  $have = @()
+  if (Test-Path $f) { $have = @(Get-Content $f | ForEach-Object { $_.Trim() }) }
+  $add = @($need | Where-Object { $have -notcontains $_ })
+  if ($add.Count -gt 0) {
+    $text = ''
+    if (Test-Path $f) { $text = [IO.File]::ReadAllText($f) }
+    if ($text.Length -gt 0 -and -not $text.EndsWith("`n")) { $text += "`r`n" }
+    $text += (($add -join "`r`n") + "`r`n")
+    [IO.File]::WriteAllText($f, $text)
+    Info ('Added to .gitignore: ' + ($add -join ', '))
+  }
+}
+
+# GitHub refuses files over 100 MB. Take anything over 50 MB out of the upload (and out of future ones).
+function Unstage-LargeFiles {
+  $r = Run-Git @('diff', '--cached', '--name-only', '--diff-filter=AM')
+  foreach ($name in @($r.Lines)) {
+    $n = $name.Trim()
+    if (-not $n) { continue }
+    $full = Join-Path $ProjectDir ($n -replace '/', '\')
+    if ((Test-Path -LiteralPath $full) -and ((Get-Item -LiteralPath $full -Force).Length -gt 50MB)) {
+      [void](Run-Git @('rm', '--cached', '-q', '--', $n))
+      $gi = Join-Path $ProjectDir '.gitignore'
+      Add-Content -Path $gi -Value $n
+      Warn ('Left out of the upload because it is too big for GitHub: ' + $n)
+    }
+  }
+}
+
+# Last line of defence: if our own (not yet pushed) commit contains a file over 50 MB, take it out of the commit.
+function Remove-LargeTracked([string]$branch) {
+  $head = (Run-Git @('rev-parse', 'HEAD')).Out.Trim()
+  $remote = (Run-Git @('rev-parse', ('origin/' + $branch))).Out.Trim()
+  if (-not $head -or $head -eq $remote) { return }   # nothing of ours to fix
+  $r = Run-Git @('ls-tree', '-r', '-l', 'HEAD')
+  $big = @()
+  foreach ($l in @($r.Lines)) {
+    if ($l -match '^\d+\s+blob\s+[0-9a-f]+\s+(\d+)\t(.+)$') {
+      if ([int64]$Matches[1] -gt 50MB) { $big += $Matches[2].Trim() }
+    }
+  }
+  if ($big.Count -eq 0) { return }
+  $gi = Join-Path $ProjectDir '.gitignore'
+  foreach ($n in $big) {
+    [void](Run-Git @('rm', '--cached', '-q', '--', $n))
+    Add-Content -Path $gi -Value $n
+    Warn ('Removed from the upload (too big for GitHub): ' + $n)
+  }
+  [void](Run-Git @('add', '.gitignore'))
+  $c = Run-Git @('commit', '--amend', '--no-edit')
+  if ($c.Code -ne 0) { throw ('Could not remove the big file from the commit: ' + $c.Out) }
+}
+
 # Push the project. A fresh unzip has no history: attach it to the repository's existing history
 # (fetch, then move the branch pointer without touching the files) so the push is a normal fast-forward.
 function Push-Project([string]$full) {
@@ -257,7 +325,11 @@ function Push-Project([string]$full) {
     [void](Run-Git @('checkout', '-B', $branch))
   }
 
+  Ensure-GitIgnore
+  # The key file must not stay in the repository (it lives in a GitHub secret now)
+  [void](Run-Git @('rm', '--cached', '--ignore-unmatch', '-q', 'app/google-services.json'))
   [void](Run-Git @('add', '-A'))
+  Unstage-LargeFiles
   $st = Run-Git @('status', '--porcelain')
   if ($st.Out.Trim().Length -gt 0) {
     $msg = 'Update from the setup wizard ' + (Get-Date -Format 'yyyy-MM-dd HH:mm')
@@ -267,6 +339,7 @@ function Push-Project([string]$full) {
   } else {
     Info 'No file changes since the last upload.'
   }
+  Remove-LargeTracked $branch
   # gradlew must be executable on the Linux build machine; Windows cannot set that bit, so set it in git.
   [void](Run-Git @('update-index', '--chmod=+x', 'gradlew'))
   $st2 = Run-Git @('status', '--porcelain')
@@ -406,6 +479,227 @@ function Ensure-Signing([string]$full) {
   throw 'Please choose 1, 2 or 3.'
 }
 
+# ------------------------------------------------------------------ Firebase / Google key file
+# google-services.json holds the API key. It is kept OUT of the repository: the wizard stores it in GitHub as a
+# secret and the build rebuilds the file from it. The wizard also fetches it from Firebase by itself (Firebase CLI).
+
+function Ensure-FirebaseCli {
+  if (Test-Path $FirebaseExe) { return }
+  Info 'Downloading the Firebase CLI (one time, about 100 MB)...'
+  New-Item -ItemType Directory -Force -Path $ToolsDir | Out-Null
+  $url = 'https://github.com/firebase/firebase-tools/releases/latest/download/firebase-tools-win.exe'
+  try { Invoke-WebRequest -Uri $url -OutFile $FirebaseExe -UseBasicParsing } catch {
+    if (Test-Path $FirebaseExe) { Remove-Item -Force $FirebaseExe }
+    throw ('Could not download the Firebase CLI: ' + $_.Exception.Message)
+  }
+  if (-not (Test-Path $FirebaseExe) -or (Get-Item $FirebaseExe).Length -lt 1000000) {
+    if (Test-Path $FirebaseExe) { Remove-Item -Force $FirebaseExe }
+    throw 'The Firebase CLI download is incomplete. Check the internet connection and run this again.'
+  }
+  Ok 'Firebase CLI is ready.'
+}
+
+function Get-FirebaseAccounts {
+  $r = Invoke-Native $FirebaseExe @('login:list')
+  $list = @()
+  foreach ($l in $r.Lines) {
+    if ($l -match 'Logged in as\s+(\S+@\S+)') { $list += $Matches[1] }
+    elseif ($l -match '^\s*-\s+(\S+@\S+)') { $list += $Matches[1] }
+  }
+  return @($list | Select-Object -Unique)
+}
+
+function Add-FirebaseAccount([bool]$first) {
+  Info 'A browser window opens. Sign in with the Google account that owns your Firebase project.'
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    if ($first) { & $FirebaseExe login } else { & $FirebaseExe login:add }
+  } finally { $ErrorActionPreference = $old }
+}
+
+# Asks which Google account to use for Firebase. The choice is remembered; $forceAsk asks again.
+function Select-FirebaseAccount([bool]$forceAsk) {
+  $accounts = @(Get-FirebaseAccounts)
+  if ($accounts.Count -eq 0) {
+    Add-FirebaseAccount $true
+    $accounts = @(Get-FirebaseAccounts)
+    if ($accounts.Count -eq 0) { throw 'Firebase sign-in did not finish.' }
+  }
+  $saved = [string](Get-St 'firebase_account')
+  if (-not $forceAsk -and $saved -and ($accounts -contains $saved)) { $Script:FbAccount = $saved; return }
+  while ($true) {
+    Say ''
+    Say 'Which Google account owns your Firebase project?' 'White'
+    for ($i = 0; $i -lt $accounts.Count; $i++) { Say ('  ' + ($i + 1) + ') ' + $accounts[$i]) 'Gray' }
+    $addNo = $accounts.Count + 1
+    Say ('  ' + $addNo + ') Add another Google account (a browser opens)') 'Gray'
+    $c = Ask 'Choose a number'
+    if ($c -notmatch '^\d+$') { continue }
+    $n = [int]$c
+    if ($n -eq $addNo) { Add-FirebaseAccount $false; $accounts = @(Get-FirebaseAccounts); continue }
+    if ($n -ge 1 -and $n -le $accounts.Count) {
+      $Script:FbAccount = $accounts[$n - 1]
+      Set-St 'firebase_account' $Script:FbAccount
+      Ok ('Using ' + $Script:FbAccount)
+      return
+    }
+  }
+}
+
+# Runs the Firebase CLI as the chosen account.
+function Invoke-Firebase([string[]]$a) {
+  $x = $a
+  if ($Script:FbAccount) { $x = $a + @('--account', $Script:FbAccount) }
+  return (Invoke-Native $FirebaseExe $x)
+}
+
+# The Firebase CLI prints spinner lines around its JSON: cut from the first { to the last } before parsing.
+function Parse-FbJson([string]$text) {
+  if (-not $text) { return $null }
+  $a = $text.IndexOf('{')
+  $b = $text.LastIndexOf('}')
+  if ($a -lt 0 -or $b -le $a) { return $null }
+  try { return ($text.Substring($a, $b - $a + 1) | ConvertFrom-Json) } catch { return $null }
+}
+
+# The old google-services.json tells us the project id and the app id.
+function Read-GoogleJson([string]$file) {
+  if (-not (Test-Path $file)) { return $null }
+  try {
+    $j = Get-Content -Raw -Path $file | ConvertFrom-Json
+    $appId = ''
+    foreach ($c in @($j.client)) {
+      if ($c.client_info.android_client_info.package_name -eq $PackageName) { $appId = [string]$c.client_info.mobilesdk_app_id }
+    }
+    return @{ ProjectId = [string]$j.project_info.project_id; AppId = $appId }
+  } catch { return $null }
+}
+
+function Get-FirebaseProjectId {
+  $saved = Get-St 'firebase_project'
+  if ($saved) { return [string]$saved }
+  $old = Read-GoogleJson $GoogleJson
+  if ($old -and $old.ProjectId) { return $old.ProjectId }
+  return $DefaultFirebaseProject
+}
+
+# Makes sure the Android app exists in Firebase, optionally registers the signing SHA-1, and writes the fresh
+# google-services.json. Returns $true when the file content changed.
+function Sync-FirebaseConfig([string]$sha1, [bool]$forceAsk = $false) {
+  Ensure-FirebaseCli
+  Select-FirebaseAccount $forceAsk
+  $project = Get-FirebaseProjectId
+  Set-St 'firebase_project' $project
+  Info ('Firebase project: ' + $project)
+
+  $appId = ''
+  $old = Read-GoogleJson $GoogleJson
+  if ($old) { $appId = $old.AppId }
+  if (-not $appId -and $project -eq $DefaultFirebaseProject) { $appId = $DefaultFirebaseAppId }
+  $r = Invoke-Firebase @('apps:list', 'ANDROID', '--project', $project, '--json')
+  if ($r.Code -ne 0) { throw ('Could not read the apps of Firebase project ' + $project + ' with this account: ' + $r.Out) }
+  $apps = @()
+  $parsed = Parse-FbJson $r.Out
+  $listOk = ($null -ne $parsed -and $null -ne $parsed.result)
+  if ($listOk) { $apps = @($parsed.result) }
+  $found = $null
+  if ($appId) { $found = $apps | Where-Object { $_.appId -eq $appId } | Select-Object -First 1 }
+  if (-not $found -and $apps.Count -eq 1 -and -not $appId) { $found = $apps[0] }
+  if ($found) {
+    $appId = [string]$found.appId
+  } elseif ($appId -and -not $listOk) {
+    # The list could not be read, but we know the app id: use it (never create a second app by mistake)
+    Info 'Using the known Firebase app id.'
+  } else {
+    Info ('Creating the Android app ' + $PackageName + ' in Firebase...')
+    $c = Invoke-Firebase @('apps:create', 'ANDROID', 'Kitaab', '--package-name', $PackageName, '--project', $project, '--json')
+    $cp = Parse-FbJson $c.Out
+    if ($c.Code -ne 0 -or $null -eq $cp -or -not $cp.result.appId) { throw ('Could not create the Firebase app: ' + $c.Out) }
+    $appId = [string]$cp.result.appId
+  }
+  Ok ('Firebase app: ' + $appId)
+
+  if ($sha1) {
+    $s = Invoke-Firebase @('apps:android:sha:create', $appId, $sha1, '--project', $project)
+    if ($s.Code -eq 0) { Ok 'Signing SHA-1 registered in Firebase (Google sign-in key).' }
+    elseif ($s.Out -match '(?i)already') { Ok 'Signing SHA-1 was already registered.' }
+    else { Warn ('Could not register the SHA-1: ' + $s.Out) }
+  }
+
+  $tmp = Join-Path $env:TEMP 'kitaab-google-services.json'
+  if (Test-Path $tmp) { Remove-Item -Force $tmp }
+  $g = Invoke-Firebase @('apps:sdkconfig', 'ANDROID', $appId, '--project', $project, '--out', $tmp)
+  if ($g.Code -ne 0 -or -not (Test-Path $tmp)) { throw ('Could not download google-services.json: ' + $g.Out) }
+  $new = Get-Content -Raw -Path $tmp
+  $cur = ''
+  if (Test-Path $GoogleJson) { $cur = Get-Content -Raw -Path $GoogleJson }
+  Remove-Item -Force $tmp
+  if ($new.Trim() -eq $cur.Trim()) { return $false }
+  Set-Content -Path $GoogleJson -Value $new -Encoding UTF8
+  Ok 'Fresh google-services.json saved in the app folder.'
+  return $true
+}
+
+function Ensure-FirebaseConfig([string]$full) {
+  Head 'Firebase / Google configuration (google-services.json)'
+  $ok = $false
+  $ask = $false
+  for ($try = 1; $try -le 4; $try++) {
+    try { [void](Sync-FirebaseConfig '' $ask); $ok = $true; break }
+    catch {
+      Warn ('Automatic Firebase setup did not work: ' + $_.Exception.Message)
+      if (-not (AskYes 'Try again with a different Google account or project?')) { break }
+      $ask = $true
+      $cur = [string](Get-St 'firebase_project')
+      if (-not $cur) { $cur = $DefaultFirebaseProject }
+      $p = Ask ('Firebase project ID (Enter = ' + $cur + ')')
+      if ($p) { Set-St 'firebase_project' $p }
+    }
+  }
+  if (-not $ok) {
+    if (-not (Test-Path $GoogleJson)) { throw 'There is no app\google-services.json to fall back on. Run this again and choose the right account.' }
+    Warn 'Using the google-services.json that is already in the app folder.'
+  }
+  Upload-GoogleJson $full
+}
+
+function Upload-GoogleJson([string]$full) {
+  if (Test-Path $GoogleJson) {
+    $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($GoogleJson))
+    Set-Secret $full 'GOOGLE_SERVICES_JSON_BASE64' $b64
+    Ok 'google-services.json saved safely in GitHub (as a secret). It is not uploaded with the project.'
+    return
+  }
+  $r = Invoke-Native 'gh' @('secret', 'list', '--repo', $full)
+  if ($r.Code -eq 0 -and $r.Out -match 'GOOGLE_SERVICES_JSON_BASE64') { Ok 'google-services.json is already in GitHub.'; return }
+  throw 'The file app\google-services.json is missing.'
+}
+
+# After the first signed build: register its SHA-1 in Firebase (this also creates the Google sign-in OAuth client),
+# fetch the updated google-services.json and, when it changed, tell the caller that one more build is needed.
+function Register-Fingerprint([string]$full) {
+  $fp = Get-FingerprintText
+  if (-not $fp) { return $false }
+  if ((Get-St 'sha_registered') -eq $fp) { return $false }
+  Head 'Google sign-in key'
+  try {
+    $changed = Sync-FirebaseConfig $fp
+    Set-St 'sha_registered' $fp
+    $project = [string](Get-St 'firebase_project')
+    Say ''
+    Warn 'One thing only you can do (Google has no automatic way): switch on the Google Drive API for your project:'
+    Say ('        https://console.cloud.google.com/apis/library/drive.googleapis.com?project=' + $project) 'White'
+    Warn 'and add your Google account under Test users:'
+    Say ('        https://console.cloud.google.com/apis/credentials/consent?project=' + $project) 'White'
+    if ($changed) { Upload-GoogleJson $full }
+    return $changed
+  } catch {
+    Warn ('Could not register the SHA-1 automatically: ' + $_.Exception.Message)
+    return $false
+  }
+}
+
 # ------------------------------------------------------------------ release notes + version
 function Get-VersionName {
   $f = Join-Path $ProjectDir 'version.properties'
@@ -509,6 +803,29 @@ function Save-BuildError([string]$full, [string]$id) {
   Info 'Send me the text of build-error.txt and I will fix it.'
 }
 
+# The certificate SHA-1 that Google needs, read from the signed build (APK\signature.txt). Colon format, or $null.
+function Get-FingerprintText {
+  $f = Join-Path $ApkDir 'signature.txt'
+  if (-not (Test-Path $f)) { return $null }
+  foreach ($l in (Get-Content $f)) {
+    if ($l -match 'SHA-1 digest:\s*([0-9A-Fa-f]{40})') {
+      $hex = $Matches[1].ToUpper()
+      $pairs = @()
+      for ($i = 0; $i -lt 40; $i += 2) { $pairs += $hex.Substring($i, 2) }
+      return ($pairs -join ':')
+    }
+  }
+  return $null
+}
+
+function Show-Fingerprint {
+  $fp = Get-FingerprintText
+  if (-not $fp) { Warn 'No fingerprint yet: run a build first (menu 2).'; return }
+  Say ''
+  Warn 'Signing SHA-1 of your APK (Google sign-in key):'
+  Say ('        ' + $fp) 'White'
+}
+
 function Get-Apk([string]$full, [string]$id) {
   Head 'Downloading the APK'
   New-Item -ItemType Directory -Force -Path $ApkDir | Out-Null
@@ -526,12 +843,14 @@ function Get-Apk([string]$full, [string]$id) {
     $last = $dest
   }
   foreach ($h in (Get-ChildItem -Path $tmp -Filter '*.sha256' -Recurse)) { Copy-Item -Force $h.FullName (Join-Path $ApkDir $h.Name) }
+  foreach ($h in (Get-ChildItem -Path $tmp -Filter 'signature.txt' -Recurse)) { Copy-Item -Force $h.FullName (Join-Path $ApkDir 'signature.txt') }
   Remove-Item -Recurse -Force $tmp
   if (Test-Path $ErrorFile) { Remove-Item -Force $ErrorFile }
   Say ''
   Ok 'DONE. Your signed APK is here:'
   Say ('        ' + $last) 'White'
   Say ''
+  Show-Fingerprint
   Info 'Phones that already have Kitaab 1.1.0 or newer update by themselves (Home banner / notification).'
   Info 'The first time, install this APK on the phone by hand. Android keeps your data when the signing key is the same.'
   try { Start-Process explorer.exe $ApkDir } catch { }
@@ -539,9 +858,19 @@ function Get-Apk([string]$full, [string]$id) {
 }
 
 # ------------------------------------------------------------------ flows
-function Finish-Run([string]$full, [string]$id) {
+function Finish-Run([string]$full, [string]$id, [bool]$allowRebuild = $true) {
   $conclusion = Watch-Run $full $id
-  if ($conclusion -eq 'success') { [void](Get-Apk $full $id) } else { Save-BuildError $full $id }
+  if ($conclusion -ne 'success') { Save-BuildError $full $id; return }
+  [void](Get-Apk $full $id)
+  if (-not $allowRebuild) { return }
+  if (Register-Fingerprint $full) {
+    Say ''
+    Say 'The Firebase file changed (it now holds the Google sign-in key). Building once more automatically...' 'Cyan'
+    $branch = Get-St 'branch'
+    if (-not $branch) { $branch = 'main' }
+    $id2 = Start-ReleaseRun $full $branch 'Google sign-in key added'
+    Finish-Run $full $id2 $false
+  }
 }
 
 function Invoke-Setup([bool]$rebuild) {
@@ -549,6 +878,7 @@ function Invoke-Setup([bool]$rebuild) {
   Ensure-GitHubLogin
   $full = Ensure-Repository
   Ensure-Signing $full
+  Ensure-FirebaseConfig $full
   $branch = Push-Project $full
   $notes = Get-ReleaseNotes
   $id = Start-ReleaseRun $full $branch $notes
@@ -562,6 +892,7 @@ function Invoke-Rebuild {
   if (-not $full) { Say 'This is the first run, so the full setup runs now.' 'Yellow'; Invoke-Setup $false; return }
   Ok ('Repository: ' + $full)
   Ensure-Signing $full
+  Ensure-FirebaseConfig $full
   $branch = Push-Project $full
   $notes = Get-ReleaseNotes
   $id = Start-ReleaseRun $full $branch $notes
@@ -607,14 +938,16 @@ function Show-Menu {
     Say '   2) Rebuild APK           (after you changed the app)' 'White'
     Say '   3) Follow a build that is already running' 'White'
     Say '   4) Show my published releases' 'White'
-    Say '   5) Exit' 'White'
-    $c = Ask 'Choose 1-5'
+    Say '   5) Show the signing SHA-1 (for Google sign-in)' 'White'
+    Say '   6) Exit' 'White'
+    $c = Ask 'Choose 1-6'
     try {
       if ($c -eq '1') { Invoke-Setup $false }
       elseif ($c -eq '2') { Invoke-Rebuild }
       elseif ($c -eq '3') { Invoke-Follow }
       elseif ($c -eq '4') { Invoke-Status }
-      elseif ($c -eq '5') { return }
+      elseif ($c -eq '5') { Show-Fingerprint }
+      elseif ($c -eq '6') { return }
     } catch {
       Bad $_.Exception.Message
       Info ('Details are in ' + $LogFile)
@@ -625,6 +958,7 @@ function Show-Menu {
 # ------------------------------------------------------------------ entry
 Load-State
 Write-Log ('=== start, mode ' + $Mode)
+Say ('Kitaab wizard ' + $WizardVersion + '   folder: ' + $ProjectDir) 'DarkGray'
 try {
   if ($Mode -eq 'menu') { Show-Menu }
   elseif ($Mode -eq 'setup') { Invoke-Setup $false }

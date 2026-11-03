@@ -3,15 +3,28 @@ package com.pdfreader.app.ui.auth
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.auth.api.signin.*
+import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
+import com.pdfreader.app.R
+import com.pdfreader.app.data.sync.DriveStore
 import com.pdfreader.app.databinding.ActivityLoginBinding
 import com.pdfreader.app.ui.home.HomeActivity
 import com.pdfreader.app.utils.PreferenceManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * Step 1: sign in with Google (required). Step 2: type a name; the app creates
+ * My Drive / books / <name> if it is missing. Then the Home screen opens.
+ */
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
@@ -19,35 +32,47 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var prefs: PreferenceManager
     private val RC_SIGN_IN = 1001
 
-    // Use the full DRIVE scope — allows reading ALL files in Drive, not just app-created ones
+    // Full DRIVE scope: the app must see the books you put in your folder yourself, not only its own files
     private val DRIVE_SCOPE = Scope("https://www.googleapis.com/auth/drive")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityLoginBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
         prefs = PreferenceManager(this)
 
-        setupSignIn()
-
-        // Check if already signed in WITH the correct Drive scope
-        val account = GoogleSignIn.getLastSignedInAccount(this)
-        val hasDriveScope = account != null &&
-            GoogleSignIn.hasPermissions(account, DRIVE_SCOPE)
-
-        if (account != null && hasDriveScope && prefs.currentUser.isNotEmpty()) {
-            goHome()
+        // Someone who already has a profile has used the app before: no intro for them
+        if (prefs.currentUser.isNotEmpty()) IntroActivity.markSeen(this)
+        // First time ever: show the short intro first (it comes back here when it is done)
+        if (!IntroActivity.isSeen(this)) {
+            startActivity(Intent(this, IntroActivity::class.java))
+            finish()
             return
         }
 
-        // If signed in but missing scope, sign out and re-request
-        if (account != null && !hasDriveScope) {
-            signInClient.signOut()
+        binding = ActivityLoginBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setupSignIn()
+
+        val account = GoogleSignIn.getLastSignedInAccount(this)
+        val hasDriveScope = account != null && GoogleSignIn.hasPermissions(account, DRIVE_SCOPE)
+
+        if (hasDriveScope && prefs.currentUser.isNotEmpty()) {
+            goHome()
+            return
+        }
+        // Signed in but without the Drive permission: sign out and ask again
+        if (account != null && !hasDriveScope) signInClient.signOut()
+
+        binding.btnSignIn.setOnClickListener {
+            binding.btnSignIn.isEnabled = false
+            binding.progressSignIn.visibility = View.VISIBLE
+            startActivityForResult(signInClient.signInIntent, RC_SIGN_IN)
+        }
+        binding.btnContinue.setOnClickListener { submitName() }
+        binding.etName.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) { submitName(); true } else false
         }
 
-        setupProfileChips()
-        setupButton()
+        if (hasDriveScope) showNameStep() else showSignInStep()
     }
 
     private fun setupSignIn() {
@@ -58,32 +83,58 @@ class LoginActivity : AppCompatActivity() {
         signInClient = GoogleSignIn.getClient(this, gso)
     }
 
-    private fun setupProfileChips() {
-        when (prefs.currentUser) {
-            "Bader"  -> selectUser("Bader")
-            "Shirin" -> selectUser("Shirin")
+    private fun showSignInStep() {
+        binding.groupSignIn.visibility = View.VISIBLE
+        binding.groupName.visibility = View.GONE
+    }
+
+    private fun showNameStep() {
+        binding.groupSignIn.visibility = View.GONE
+        binding.groupName.visibility = View.VISIBLE
+        if (binding.etName.text.isNullOrEmpty()) binding.etName.setText(prefs.currentUser)
+        val given = GoogleSignIn.getLastSignedInAccount(this)?.givenName
+        if (!given.isNullOrBlank()) binding.etName.hint = given
+    }
+
+    /** What the user typed, trimmed. Null (with a message shown) when it cannot be a folder name. */
+    private fun validName(): String? {
+        val name = binding.etName.text?.toString().orEmpty().trim().replace(Regex("\\s+"), " ")
+        val problem = when {
+            name.isEmpty() -> getString(R.string.login_name_empty)
+            name.length > 40 -> getString(R.string.login_name_long)
+            name.startsWith(".") || name.any { it in "/\\:*?\"<>|" } -> getString(R.string.login_name_chars)
+            else -> null
         }
-        binding.chipBader.setOnClickListener  { selectUser("Bader") }
-        binding.chipShirin.setOnClickListener { selectUser("Shirin") }
+        binding.tvNameHint.visibility = if (problem == null) View.GONE else View.VISIBLE
+        binding.tvNameHint.text = problem.orEmpty()
+        return if (problem == null) name else null
     }
 
-    private fun selectUser(name: String) {
-        prefs.currentUser = name
-        binding.chipBader.isChecked  = name == "Bader"
-        binding.chipShirin.isChecked = name == "Shirin"
-        binding.tvProfileHint.visibility = View.GONE
-    }
-
-    private fun setupButton() {
-        binding.btnSignIn.setOnClickListener {
-            if (prefs.currentUser.isEmpty()) {
-                binding.tvProfileHint.visibility = View.VISIBLE
-                binding.tvProfileHint.text = "Please select a profile above"
-                return@setOnClickListener
+    private fun submitName() {
+        val typed = validName() ?: return
+        binding.btnContinue.isEnabled = false
+        binding.progressName.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val store = DriveStore(applicationContext)
+                    val drive = store.driveService() ?: throw IllegalStateException("Not signed in to Google")
+                    // Creates My Drive / books / <name> when missing; returns the real folder name
+                    store.resolveUserFolder(drive, typed).second
+                }
             }
-            binding.btnSignIn.isEnabled = false
-            binding.progressSignIn.visibility = View.VISIBLE
-            startActivityForResult(signInClient.signInIntent, RC_SIGN_IN)
+            binding.btnContinue.isEnabled = true
+            binding.progressName.visibility = View.GONE
+            result.fold(
+                onSuccess = { folderName ->
+                    prefs.currentUser = folderName
+                    goHome()
+                },
+                onFailure = { e ->
+                    binding.tvNameHint.visibility = View.VISIBLE
+                    binding.tvNameHint.text = getString(R.string.login_folder_failed, e.message ?: e.javaClass.simpleName)
+                }
+            )
         }
     }
 
@@ -95,7 +146,7 @@ class LoginActivity : AppCompatActivity() {
             binding.progressSignIn.visibility = View.GONE
             try {
                 GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
-                goHome()
+                showNameStep()
             } catch (e: ApiException) {
                 Toast.makeText(this, "Sign-in failed (code ${e.statusCode})", Toast.LENGTH_LONG).show()
             }

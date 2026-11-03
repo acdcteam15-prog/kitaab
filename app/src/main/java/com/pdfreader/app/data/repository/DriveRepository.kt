@@ -15,6 +15,7 @@ import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
 import com.google.api.services.drive.model.File as DriveFile
 import com.pdfreader.app.data.pdf.cleanBookName
+import com.pdfreader.app.data.sync.DriveStore
 import com.pdfreader.app.data.model.Book
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -117,20 +118,11 @@ class DriveRepository(private val context: Context) {
                 val drive = getDriveService()
                     ?: throw IllegalStateException("Not signed in to Google")
 
-                val rootFolder = drive.files().list()
-                    .setQ("name = 'Books' and mimeType = 'application/vnd.google-apps.folder' and trashed = false")
-                    .setFields("files(id, name)").setSpaces("drive").execute()
-                    .files.firstOrNull()
-                    ?: throw Exception("'Books' folder not found in your Drive")
-
-                val userFolder = drive.files().list()
-                    .setQ("name = '$userName' and mimeType = 'application/vnd.google-apps.folder' and '${rootFolder.id}' in parents and trashed = false")
-                    .setFields("files(id, name)").setSpaces("drive").execute()
-                    .files.firstOrNull()
-                    ?: throw Exception("Folder '$userName' not found inside 'Books'")
+                // My Drive / books / <name>  (both folders are created when missing)
+                val userFolderId = DriveStore(context).ensureUserFolder(drive, userName)
 
                 val pdfFiles = drive.files().list()
-                    .setQ("mimeType = 'application/pdf' and '${userFolder.id}' in parents and trashed = false")
+                    .setQ("mimeType = 'application/pdf' and '$userFolderId' in parents and trashed = false")
                     .setFields("files(id, name, size, thumbnailLink)")
                     .setOrderBy("name").setSpaces("drive").execute().files
 
@@ -268,24 +260,8 @@ class DriveRepository(private val context: Context) {
 
     private fun esc(s: String) = s.replace("\\", "\\\\").replace("'", "\\'")
 
-    private fun findOrCreateUserFolder(drive: Drive, userName: String): String {
-        val folderMime = "application/vnd.google-apps.folder"
-        val root = drive.files().list()
-            .setQ("name = 'Books' and mimeType = '$folderMime' and trashed = false")
-            .setFields("files(id, name)").setSpaces("drive").execute()
-            .files?.firstOrNull()
-            ?: drive.files().create(DriveFile().apply { name = "Books"; mimeType = folderMime })
-                .setFields("id").execute()
-
-        val user = drive.files().list()
-            .setQ("name = '${esc(userName)}' and mimeType = '$folderMime' and '${root.id}' in parents and trashed = false")
-            .setFields("files(id, name)").setSpaces("drive").execute()
-            .files?.firstOrNull()
-            ?: drive.files().create(DriveFile().apply {
-                name = userName; mimeType = folderMime; parents = listOf(root.id)
-            }).setFields("id").execute()
-        return user.id
-    }
+    private fun findOrCreateUserFolder(drive: Drive, userName: String): String =
+        DriveStore(context).ensureUserFolder(drive, userName)
 
     private fun uniqueName(drive: Drive, folderId: String, base: String): String {
         fun taken(n: String) = !drive.files().list()

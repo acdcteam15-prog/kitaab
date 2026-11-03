@@ -20,6 +20,8 @@
         android:theme="@style/Theme.PDFReader"
         android:hardwareAccelerated="true">
 
+        <activity android:name=".ui.auth.IntroActivity" android:exported="false" />
+
         <activity android:name=".ui.auth.LoginActivity" android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

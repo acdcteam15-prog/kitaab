@@ -20,6 +20,7 @@ import com.pdfreader.app.data.model.ReadingProgress
 import com.pdfreader.app.sync.FirebaseSyncManager
 import com.pdfreader.app.data.sync.SyncMerge
 import com.pdfreader.app.data.sync.DriveStore
+import com.pdfreader.app.data.sync.ProgressDoc
 import com.pdfreader.app.worker.SyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -261,7 +262,7 @@ class ProgressRepository(private val context: Context) {
         val drive = getDriveService() ?: return@withContext false
         syncMutex.withLock {
             try {
-                store.listByName(drive, progressFileName(ownerName, bookId)).forEach { drive.files().delete(it.id).execute() }
+                removeProgressFromDoc(drive, ownerName, bookId)
                 progressDao.deleteProgress(bookId, ownerName)
                 archivedCoverFile(bookId).delete()
                 true
@@ -422,186 +423,197 @@ class ProgressRepository(private val context: Context) {
 
     fun pushWeeklySnapshotToDrive(ownerName: String, snapshotJson: String) {
         val drive = getDriveService() ?: return
-        try { store.uploadJson(drive, "weekly_snapshot_${ownerName}.json", snapshotJson) }
-        catch (e: Exception) { Log.e(TAG, "Weekly push failed: ${e.message}") }
+        try {
+            kotlinx.coroutines.runBlocking {
+                syncMutex.withLock {
+                    val file = loadDoc(drive, ownerName)
+                    file.doc.weekly = snapshotJson
+                    store.writeDoc(drive, ownerName, file)
+                }
+            }
+        } catch (e: Exception) { Log.e(TAG, "Weekly push failed: ${e.message}") }
     }
 
     fun fetchWeeklySnapshotFromDrive(ownerName: String): String? {
         val drive = getDriveService() ?: return null
         return try {
-            val f = store.listByName(drive, "weekly_snapshot_${ownerName}.json").firstOrNull() ?: return null
-            store.download(drive, f.id)
+            kotlinx.coroutines.runBlocking { syncMutex.withLock { loadDoc(drive, ownerName).doc.weekly } }
         } catch (e: Exception) { null }
     }
 
     fun deleteWeeklySnapshotFromDrive(ownerName: String) {
         val drive = getDriveService() ?: return
         try {
-            store.listByName(drive, "weekly_snapshot_${ownerName}.json").forEach { drive.files().delete(it.id).execute() }
+            kotlinx.coroutines.runBlocking {
+                syncMutex.withLock {
+                    val file = loadDoc(drive, ownerName)
+                    if (file.doc.weekly != null) {
+                        file.doc.weekly = null
+                        store.writeDoc(drive, ownerName, file)
+                    }
+                }
+            }
         } catch (e: Exception) { Log.e(TAG, "Weekly delete failed: ${e.message}") }
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    // PUSH (caller holds syncMutex)
-    // ═════════════════════════════════════════════════════════════════════════
+    // =========================================================================
+    // ONE FILE PER USER:  My Drive / books / <name> / progress.json
+    // It holds the progress, bookmarks and highlights of EVERY book (see ProgressDoc).
+    // Every function below runs while the caller holds syncMutex.
+    // =========================================================================
 
-    private suspend fun pushPendingLocked(drive: Drive, ownerName: String): Int {
-        var pushed = 0
-        progressDao.getUnsynced(ownerName).forEach { p ->
-            pushOneLocked(drive, p); pushed++
-        }
-        bookmarkDao.booksWithUnsynced(ownerName).forEach { bookId ->
-            pushBookmarksLocked(drive, bookId, ownerName); pushed++
-        }
-        highlightDao.booksWithUnsynced(ownerName).forEach { bookId ->
-            pushHighlightsLocked(drive, bookId, ownerName); pushed++
-        }
-        return pushed
+    /** Reads progress.json. The first time, the old per-book files are merged into it (see [migrateLegacy]). */
+    private suspend fun loadDoc(drive: Drive, ownerName: String, onlyIfChanged: Boolean = false): DriveStore.DocFile {
+        val migrated = store.isMigrated(ownerName)
+        val skip = if (onlyIfChanged && migrated) store.knownMtime(store.docMtimeKey(ownerName)) else -1L
+        val file = store.readDoc(drive, ownerName, skip)
+        return if (migrated) file else migrateLegacy(drive, ownerName, file)
     }
 
-    /** Read-merge-write for one progress row. Throws on network failure. */
-    private suspend fun pushOneLocked(drive: Drive, local: ReadingProgress) {
-        val cloud  = fetchProgressFromDrive(drive, local.bookId, local.ownerName)
-        val merged = if (cloud != null) merge(local, cloud) else local
-        val mtime  = store.uploadJson(drive, progressFileName(local.ownerName, local.bookId), toJson(merged))
-        store.rememberMtime(progressFileName(local.ownerName, local.bookId), mtime)
-
-        db.withTransaction {
-            val current = progressDao.getProgress(local.bookId, local.ownerName)
-            if (current != null && current.updatedAt == local.updatedAt) {
-                // Nothing changed while uploading → store merged result as synced
-                progressDao.saveProgress(merged.copy(isSynced = true, updatedAt = local.updatedAt))
-            } else {
-                Log.d(TAG, "push: ${local.bookId} edited during upload — stays pending")
+    /**
+     * One-time move of the old separate files (progress_*, bookmarks_*, highlights_*, weekly_snapshot_*) into
+     * progress.json. The old files go to the Drive trash only AFTER the new file was written successfully,
+     * and any file that cannot be read stops the move (it is tried again on the next sync).
+     */
+    private suspend fun migrateLegacy(drive: Drive, owner: String, file: DriveStore.DocFile): DriveStore.DocFile {
+        val legacy = store.listLegacyFiles(drive, owner)
+        if (legacy.isEmpty()) { store.markMigrated(owner); return file }
+        val old = ProgressDoc(owner)
+        for (f in legacy) {
+            val text = store.download(drive, f.id)
+            when {
+                f.name.startsWith("progress_")        -> ProgressDoc.legacyProgress(text, owner)?.let { old.putProgress(it) }
+                f.name.startsWith("bookmarks_")       -> ProgressDoc.legacyBookmarks(text, owner)?.let { (id, l) -> old.putBookmarks(id, l) }
+                f.name.startsWith("highlights_")      -> ProgressDoc.legacyHighlights(text, owner)?.let { (id, l) -> old.putHighlights(id, l) }
+                f.name.startsWith("weekly_snapshot_") -> if (old.weekly == null && text.isNotBlank()) old.weekly = text
             }
         }
-        Log.d(TAG, "Pushed ✓ ${local.bookId} page=${merged.currentPage} pin=${merged.positionPinPage}")
-        val note = when {
-            cloud != null && cloud.lastReadTimestamp > local.lastReadTimestamp ->
-                "kept newer page ${cloud.currentPage + 1} from other device"
-            merged.isFinished && (cloud?.isFinished != true) -> "marked finished"
-            else -> "page ${merged.currentPage + 1} / ${merged.totalPages}"
-        }
-        logEvent(local.ownerName, if (cloud != null && cloud.lastReadTimestamp > local.lastReadTimestamp) "CONFLICT" else "PUSH",
-            local.bookId, merged.bookName, note)
+        file.doc.mergeFrom(old)
+        val saved = store.writeDoc(drive, owner, file)
+        legacy.forEach { runCatching { store.trash(drive, it.id) } }
+        store.markMigrated(owner)
+        logEvent(owner, "SYNC", detail = "moved ${legacy.size} old files into progress.json")
+        return saved
     }
 
-    private suspend fun pushBookmarksLocked(drive: Drive, bookId: String, ownerName: String) {
-        val name = bookmarksFileName(ownerName, bookId)
-        // 1. merge remote into local first so we upload the union
-        store.listByName(drive, name).firstOrNull()?.let { f -> mergeBookmarksJson(store.download(drive, f.id)) }
-        // 2. upload full local set (incl. tombstones)
-        val all = bookmarkDao.getAllIncludingDeleted(bookId, ownerName)
-        val arr = JSONArray()
-        all.forEach { bm ->
-            arr.put(JSONObject().apply {
-                put("uid", bm.uid); put("bookId", bm.bookId); put("ownerName", bm.ownerName)
-                put("pageNumber", bm.pageNumber); put("label", bm.label)
-                put("createdAt", bm.createdAt); put("updatedAt", bm.updatedAt); put("isDeleted", bm.isDeleted)
-            })
-        }
-        val json = JSONObject().apply { put("bookId", bookId); put("ownerName", ownerName); put("bookmarks", arr) }
-        val mtime = store.uploadJson(drive, name, json.toString())
-        store.rememberMtime(name, mtime)
-        all.forEach { bookmarkDao.markSyncedIfUnchanged(it.uid, it.updatedAt) }
-        Log.d(TAG, "Bookmarks pushed ✓ $bookId (${all.count { !it.isDeleted }} active)")
-        logEvent(ownerName, "PUSH", bookId, progressDao.getProgress(bookId, ownerName)?.bookName ?: "",
-            "bookmarks (${all.count { !it.isDeleted }})")
+    private suspend fun pushPendingLocked(drive: Drive, ownerName: String): Int {
+        val rows = progressDao.getUnsynced(ownerName)
+        val bmBooks = bookmarkDao.booksWithUnsynced(ownerName)
+        val hlBooks = highlightDao.booksWithUnsynced(ownerName)
+        return pushRowsLocked(drive, ownerName, rows, bmBooks, hlBooks)
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    // PULL (caller holds syncMutex)
-    // ═════════════════════════════════════════════════════════════════════════
+    /** Read-merge-write of one progress row. Throws on network failure. */
+    private suspend fun pushOneLocked(drive: Drive, local: ReadingProgress) {
+        pushRowsLocked(drive, local.ownerName, listOf(local), emptyList(), emptyList())
+    }
+
+    /**
+     * Read progress.json, merge the pending rows in (newest saved time wins per book), write it back once.
+     * Returns how many items were pushed.
+     */
+    private suspend fun pushRowsLocked(
+        drive: Drive, ownerName: String,
+        rows: List<ReadingProgress>, bmBooks: List<String>, hlBooks: List<String>
+    ): Int {
+        if (rows.isEmpty() && bmBooks.isEmpty() && hlBooks.isEmpty()) return 0
+        val file = loadDoc(drive, ownerName)
+        val doc = file.doc
+
+        // progress: merge each pending row into the document
+        val results = rows.map { local ->
+            val cloudBefore = doc.books[local.bookId]?.progress
+            Triple(local, cloudBefore, doc.putProgress(local))
+        }
+        // bookmarks / highlights: take the remote ones into Room first, then put the full local set in the file
+        val bmSent = bmBooks.associateWith { id ->
+            applyBookmarks(doc.books[id]?.bookmarks ?: emptyList())
+            bookmarkDao.getAllIncludingDeleted(id, ownerName).also { doc.putBookmarks(id, it) }
+        }
+        val hlSent = hlBooks.associateWith { id ->
+            applyHighlights(doc.books[id]?.highlights ?: emptyList())
+            highlightDao.allIncludingDeleted(id, ownerName).also { doc.putHighlights(id, it) }
+        }
+
+        // The mtime is deliberately NOT remembered here: the next pull must read the file once, because
+        // it may contain newer progress of OTHER books written by another phone.
+        store.writeDoc(drive, ownerName, file)
+
+        for ((local, cloud, merged) in results) {
+            db.withTransaction {
+                val current = progressDao.getProgress(local.bookId, local.ownerName)
+                if (current != null && current.updatedAt == local.updatedAt) {
+                    // Nothing changed while uploading: store the merged result as synced
+                    progressDao.saveProgress(merged.copy(ownerName = local.ownerName, isSynced = true, updatedAt = local.updatedAt))
+                } else {
+                    Log.d(TAG, "push: ${local.bookId} edited during upload - stays pending")
+                }
+            }
+            val conflict = cloud != null && cloud.lastReadTimestamp > local.lastReadTimestamp
+            val note = when {
+                conflict -> "kept newer page ${cloud!!.currentPage + 1} from other device"
+                merged.isFinished && (cloud?.isFinished != true) -> "marked finished"
+                else -> "page ${merged.currentPage + 1} / ${merged.totalPages}"
+            }
+            logEvent(local.ownerName, if (conflict) "CONFLICT" else "PUSH", local.bookId, merged.bookName, note)
+        }
+        for ((bookId, all) in bmSent) {
+            all.forEach { bookmarkDao.markSyncedIfUnchanged(it.uid, it.updatedAt) }
+            logEvent(ownerName, "PUSH", bookId, progressDao.getProgress(bookId, ownerName)?.bookName ?: "",
+                "bookmarks (${all.count { !it.isDeleted }})")
+        }
+        for ((bookId, all) in hlSent) {
+            all.forEach { highlightDao.markSyncedIfUnchanged(it.uid, it.updatedAt) }
+            logEvent(ownerName, "PUSH", bookId, progressDao.getProgress(bookId, ownerName)?.bookName ?: "",
+                "highlights (${all.count { !it.isDeleted }})")
+        }
+        Log.d(TAG, "Pushed progress.json: ${rows.size} progress, ${bmBooks.size} bookmark sets, ${hlBooks.size} highlight sets")
+        return rows.size + bmBooks.size + hlBooks.size
+    }
 
     private suspend fun pullLocked(drive: Drive, ownerName: String): Int {
+        val file = loadDoc(drive, ownerName, onlyIfChanged = true)
+        if (file.unchanged) return 0
         var updated = 0
-        val owner = store.esc(ownerName)
-
-        // Progress files
-        val progressFiles = drive.files().list()
-            .setQ("name contains 'progress_${owner}_' and trashed = false")
-            .setFields("files(id, name, modifiedTime)").setSpaces("drive").execute().files
-        for (f in progressFiles) {
-            try {
-                val mtime = f.modifiedTime?.value ?: 0L
-                val bookId = f.name.removePrefix("progress_${ownerName}_").removeSuffix(".json")
-                if (mtime > 0 && store.knownMtime(f.name) == mtime && progressDao.getProgress(bookId, ownerName) != null) continue
-                val cloud = parseProgress(store.download(drive, f.id)) ?: continue
-                if (applyCloud(cloud)) updated++
-                store.rememberMtime(f.name, mtime)
-            } catch (e: Exception) { Log.e(TAG, "pull ${f.name}: ${e.message}") }
+        for ((bookId, e) in file.doc.books) {
+            e.progress?.let { if (applyCloud(it.copy(bookId = bookId, ownerName = ownerName))) updated++ }
+            applyBookmarks(e.bookmarks.map { it.copy(bookId = bookId, ownerName = ownerName) })
+            applyHighlights(e.highlights.map { it.copy(bookId = bookId, ownerName = ownerName) })
         }
-
-        // Bookmark files
-        val bmFiles = drive.files().list()
-            .setQ("name contains 'bookmarks_${owner}_' and trashed = false")
-            .setFields("files(id, name, modifiedTime)").setSpaces("drive").execute().files
-        for (f in bmFiles) {
-            try {
-                val mtime = f.modifiedTime?.value ?: 0L
-                if (mtime > 0 && store.knownMtime(f.name) == mtime) continue
-                mergeBookmarksJson(store.download(drive, f.id))
-                store.rememberMtime(f.name, mtime)
-            } catch (e: Exception) { Log.e(TAG, "pull ${f.name}: ${e.message}") }
-        }
-
-        // Highlight files
-        val hlFiles = drive.files().list()
-            .setQ("name contains 'highlights_${owner}_' and trashed = false")
-            .setFields("files(id, name, modifiedTime)").setSpaces("drive").execute().files
-        for (f in hlFiles) {
-            try {
-                val mtime = f.modifiedTime?.value ?: 0L
-                if (mtime > 0 && store.knownMtime(f.name) == mtime) continue
-                mergeHighlightsJson(store.download(drive, f.id))
-                store.rememberMtime(f.name, mtime)
-            } catch (e: Exception) { Log.e(TAG, "pull ${f.name}: ${e.message}") }
-        }
+        if (file.fileId != null) store.rememberMtime(store.docMtimeKey(ownerName), file.mtime)
         return updated
     }
 
-    private fun highlightsFileName(owner: String, bookId: String) = "highlights_${owner}_${bookId}.json"
+    /** The cloud copy of one book (null when the book is not in progress.json). */
+    private suspend fun fetchProgressFromDrive(drive: Drive, bookId: String, ownerName: String): ReadingProgress? =
+        loadDoc(drive, ownerName).doc.books[bookId]?.progress?.copy(ownerName = ownerName, isSynced = true)
 
-    private suspend fun pushHighlightsLocked(drive: Drive, bookId: String, ownerName: String) {
-        val name = highlightsFileName(ownerName, bookId)
-        store.listByName(drive, name).firstOrNull()?.let { f -> mergeHighlightsJson(store.download(drive, f.id)) }
-        val all = highlightDao.allIncludingDeleted(bookId, ownerName)
-        val arr = JSONArray()
-        all.forEach { h ->
-            arr.put(JSONObject().apply {
-                put("uid", h.uid); put("bookId", h.bookId); put("ownerName", h.ownerName); put("page", h.page)
-                put("l", h.left.toDouble()); put("t", h.top.toDouble()); put("r", h.right.toDouble()); put("b", h.bottom.toDouble())
-                put("color", h.color); put("note", h.note)
-                put("createdAt", h.createdAt); put("updatedAt", h.updatedAt); put("isDeleted", h.isDeleted)
-            })
-        }
-        val json = JSONObject().apply { put("bookId", bookId); put("ownerName", ownerName); put("highlights", arr) }
-        store.rememberMtime(name, store.uploadJson(drive, name, json.toString()))
-        all.forEach { highlightDao.markSyncedIfUnchanged(it.uid, it.updatedAt) }
-        logEvent(ownerName, "PUSH", bookId, progressDao.getProgress(bookId, ownerName)?.bookName ?: "",
-            "highlights (${all.count { !it.isDeleted }})")
+    /** Removes the progress record of one book from progress.json (bookmarks and highlights stay). */
+    private suspend fun removeProgressFromDoc(drive: Drive, ownerName: String, bookId: String) {
+        val file = loadDoc(drive, ownerName)
+        val e = file.doc.books[bookId] ?: return
+        e.progress = null
+        if (e.isEmpty) file.doc.books.remove(bookId)
+        store.writeDoc(drive, ownerName, file)
     }
 
-    private suspend fun mergeHighlightsJson(text: String) {
-        val root = JSONObject(text)
-        val arr  = root.optJSONArray("highlights") ?: return
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            val remote = Highlight(
-                uid = o.getString("uid"),
-                bookId = o.optString("bookId", root.optString("bookId")),
-                ownerName = o.optString("ownerName", root.optString("ownerName")),
-                page = o.getInt("page"),
-                left = o.getDouble("l").toFloat(), top = o.getDouble("t").toFloat(),
-                right = o.getDouble("r").toFloat(), bottom = o.getDouble("b").toFloat(),
-                color = o.getInt("color"), note = o.optString("note", ""),
-                createdAt = o.optLong("createdAt"), updatedAt = o.optLong("updatedAt"),
-                isDeleted = o.optBoolean("isDeleted", false), isSynced = true
-            )
+    private suspend fun applyBookmarks(list: List<Bookmark>) {
+        for (remote in list) {
+            val local = bookmarkDao.getByUid(remote.uid)
+            when (SyncMerge.decideBookmark(local, remote)) {
+                SyncMerge.BookmarkAction.INSERT    -> bookmarkDao.upsert(remote.copy(id = 0, isSynced = true))
+                SyncMerge.BookmarkAction.OVERWRITE -> bookmarkDao.upsert(remote.copy(id = local!!.id, isSynced = true))
+                SyncMerge.BookmarkAction.IGNORE    -> {}
+            }
+        }
+    }
+
+    private suspend fun applyHighlights(list: List<Highlight>) {
+        for (remote in list) {
             val local = highlightDao.byUid(remote.uid)
             when (SyncMerge.decideHighlight(local?.updatedAt, remote.updatedAt, remote.isDeleted)) {
-                SyncMerge.BookmarkAction.INSERT    -> highlightDao.upsert(remote)
-                SyncMerge.BookmarkAction.OVERWRITE -> highlightDao.upsert(remote.copy(id = local!!.id))
+                SyncMerge.BookmarkAction.INSERT    -> highlightDao.upsert(remote.copy(id = 0, isSynced = true))
+                SyncMerge.BookmarkAction.OVERWRITE -> highlightDao.upsert(remote.copy(id = local!!.id, isSynced = true))
                 SyncMerge.BookmarkAction.IGNORE    -> {}
             }
         }
@@ -633,93 +645,8 @@ class ProgressRepository(private val context: Context) {
         true
     }
 
-    private suspend fun mergeBookmarksJson(text: String) {
-        val root = JSONObject(text)
-        val arr  = root.optJSONArray("bookmarks") ?: return
-        for (i in 0 until arr.length()) {
-            val o         = arr.getJSONObject(i)
-            val bookId    = o.optString("bookId", root.optString("bookId"))
-            val owner     = o.optString("ownerName", root.optString("ownerName"))
-            val page      = o.getInt("pageNumber")
-            val createdAt = o.optLong("createdAt", 0L)
-            val uid       = o.optString("uid").ifEmpty { SyncMerge.legacyUid(bookId, page, createdAt) }
-            val remote = Bookmark(
-                bookId = bookId, ownerName = owner, pageNumber = page,
-                label = o.optString("label", "Page ${page + 1}"), createdAt = createdAt,
-                uid = uid, updatedAt = o.optLong("updatedAt", createdAt),
-                isDeleted = o.optBoolean("isDeleted", false), isSynced = true
-            )
-            val local = bookmarkDao.getByUid(uid)
-            when (SyncMerge.decideBookmark(local, remote)) {
-                SyncMerge.BookmarkAction.INSERT    -> bookmarkDao.upsert(remote)
-                SyncMerge.BookmarkAction.OVERWRITE -> bookmarkDao.upsert(remote.copy(id = local!!.id))
-                SyncMerge.BookmarkAction.IGNORE    -> {}
-            }
-        }
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════
-    // MERGE LOGIC
-    // ═════════════════════════════════════════════════════════════════════════
-
     private fun merge(local: ReadingProgress, cloud: ReadingProgress) = SyncMerge.merge(local, cloud)
     private fun sameContent(a: ReadingProgress, b: ReadingProgress) = SyncMerge.sameContent(a, b)
-
-    // ═════════════════════════════════════════════════════════════════════════
-    // JSON
-    // ═════════════════════════════════════════════════════════════════════════
-
-    private fun toJson(p: ReadingProgress): String = JSONObject().apply {
-        put("bookId",             p.bookId)
-        put("ownerName",          p.ownerName)
-        put("bookName",           p.bookName)
-        put("currentPage",        p.currentPage)
-        put("totalPages",         p.totalPages)
-        put("scrollOffset",       p.scrollOffset.toDouble())
-        put("timestamp",          p.lastReadTimestamp)
-        put("totalReadingTimeMs", p.totalReadingTimeMs)
-        put("positionPinPage",    p.positionPinPage)
-        put("positionPinYRatio",  p.positionPinYRatio.toDouble())
-        put("pinUpdatedAt",       p.pinUpdatedAt)
-        put("finishedAt",         p.finishedAt)
-        put("finishedUpdatedAt",  p.finishedUpdatedAt)
-        put("schema",             4)
-    }.toString()
-
-    private fun parseProgress(text: String): ReadingProgress? = try {
-        val j  = JSONObject(text)
-        val ts = j.getLong("timestamp")
-        val pinPage = j.optInt("positionPinPage", -1)
-        ReadingProgress(
-            bookId             = j.getString("bookId"),
-            ownerName          = j.getString("ownerName"),
-            bookName           = j.optString("bookName", ""),
-            currentPage        = j.getInt("currentPage"),
-            totalPages         = j.getInt("totalPages"),
-            scrollOffset       = j.optDouble("scrollOffset", 0.0).toFloat(),
-            lastReadTimestamp  = ts,
-            totalReadingTimeMs = j.optLong("totalReadingTimeMs", 0L),
-            isSynced           = true,
-            positionPinPage    = pinPage,
-            positionPinYRatio  = j.optDouble("positionPinYRatio", -1.0).toFloat(),
-            // Legacy files (schema < 4) have no pin stamp: treat their pin as old as the record
-            pinUpdatedAt       = j.optLong("pinUpdatedAt", if (pinPage >= 0) ts else 0L),
-            finishedAt         = j.optLong("finishedAt", 0L),
-            finishedUpdatedAt  = j.optLong("finishedUpdatedAt", 0L)
-        )
-    } catch (e: Exception) { Log.e(TAG, "parseProgress: ${e.message}"); null }
-
-    // ═════════════════════════════════════════════════════════════════════════
-    // DRIVE PRIMITIVES
-    // ═════════════════════════════════════════════════════════════════════════
-
-    private fun progressFileName(owner: String, bookId: String)  = "progress_${owner}_${bookId}.json"
-    private fun bookmarksFileName(owner: String, bookId: String) = "bookmarks_${owner}_${bookId}.json"
-
-    private fun fetchProgressFromDrive(drive: Drive, bookId: String, ownerName: String): ReadingProgress? {
-        val f = store.listByName(drive, progressFileName(ownerName, bookId)).firstOrNull() ?: return null
-        return parseProgress(store.download(drive, f.id))
-    }
 
     /** Old builds kept a file queue; Room already holds that data as isSynced = false. */
     private fun cleanupLegacyQueue() {

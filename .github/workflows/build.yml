@@ -47,6 +47,22 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # google-services.json holds the Firebase / Google API key and is NOT in the repository. Use the real one
+      # when the secret exists; otherwise a harmless placeholder so tests and the debug build still compile
+      # (for example for Dependabot pull requests, which cannot read secrets).
+      - name: Restore google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          else
+            echo "::warning::No GOOGLE_SERVICES_JSON_BASE64 secret: using a placeholder (this APK cannot sign in or sync)."
+            cat > app/google-services.json <<'JSON'
+          {"project_info":{"project_number":"000000000000","project_id":"placeholder","firebase_url":"https://placeholder-default-rtdb.firebaseio.com","storage_bucket":"placeholder.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000","android_client_info":{"package_name":"com.pdfreader.app"}},"oauth_client":[],"api_key":[{"current_key":"placeholder"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}
+          JSON
+          fi
+
       - name: Unit tests
         run: bash .github/gradle.sh testDebugUnitTest
 

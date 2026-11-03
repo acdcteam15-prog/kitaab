@@ -20,10 +20,12 @@ local.properties
 *.jks
 *.keystore
 keystore.properties
+app/google-services.json
 APK/
 build-error.txt
 setup/state.json
 setup/wizard.log
+setup/tools/
 
 # A stray copy of some files that was inside an older zip
 /Booky/
