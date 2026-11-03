@@ -22,6 +22,8 @@ import com.github.barteksc.pdfviewer.listener.OnLongPressListener
 import com.github.barteksc.pdfviewer.listener.OnPageChangeListener
 import com.github.barteksc.pdfviewer.listener.OnRenderListener
 import com.github.barteksc.pdfviewer.listener.OnTapListener
+import com.github.barteksc.pdfviewer.listener.OnErrorListener
+import com.github.barteksc.pdfviewer.listener.OnPageErrorListener
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
 import com.google.android.material.snackbar.Snackbar
@@ -308,6 +310,12 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
                 if (page == pinPage) pendingPinPulse = false
                 maybePromptFinished()
             })
+            .onError(OnErrorListener { t -> showOpenError(t) })
+            .onPageError(OnPageErrorListener { page, t ->
+                android.util.Log.e("Reader", "Page ${page + 1} could not be drawn: ${t.message}")
+                // Several pages failing means the file itself is the problem, not one odd page
+                if (++pageErrors >= 3) showOpenError(t)
+            })
             .onTap(OnTapListener { e -> handleTap(e); true })
             .onDrawAll(OnDrawListener { canvas, pw, ph, displayPage -> drawHighlights(canvas, pw, ph, displayPage) })
             .onLongPress(OnLongPressListener { event ->
@@ -318,6 +326,25 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     }
 
     // ── Page curl (book mode) ─────────────────────────────────────────────────
+
+    private var pageErrors = 0
+    private var openErrorShown = false
+
+    /** The viewer could not read the book: say so instead of leaving a screen of blank pages. */
+    private fun showOpenError(t: Throwable) {
+        android.util.Log.e("Reader", "Book could not be displayed: ${t.javaClass.simpleName}: ${t.message}")
+        if (openErrorShown || isFinishing) return
+        openErrorShown = true
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("This book can't be displayed")
+            .setMessage("The file on this phone may be damaged or incomplete.\n\n" +
+                "Go back, long-press the book in your library, choose \"Delete local copy\", then tap the book to download it again.\n\n" +
+                "(${t.javaClass.simpleName}: ${t.message})")
+            .setPositiveButton("Back to library") { _, _ -> finish() }
+            .setNegativeButton("Stay", null)
+            .setCancelable(true)
+            .show()
+    }
 
     private fun setupCurl(horizontal: Boolean) {
         binding.curlLayout.vertical = !horizontal
