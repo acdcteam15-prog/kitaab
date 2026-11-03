@@ -24,7 +24,7 @@ import com.pdfreader.app.utils.PreferenceManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class ShelvesActivity : AppCompatActivity() {
+class ShelvesActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivityShelvesBinding
     private lateinit var prefs: PreferenceManager

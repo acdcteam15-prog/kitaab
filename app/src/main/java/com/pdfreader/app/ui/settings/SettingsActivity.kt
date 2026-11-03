@@ -17,7 +17,7 @@ import com.pdfreader.app.databinding.ActivitySettingsBinding
 import com.pdfreader.app.utils.PreferenceManager
 import com.pdfreader.app.utils.WakeLockManager
 
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var prefs: PreferenceManager
@@ -39,6 +39,82 @@ class SettingsActivity : AppCompatActivity() {
             getString(R.string.upd_menu_summary, com.pdfreader.app.update.UpdateRepository(this).installedName())
         binding.rowUpdates.setOnClickListener {
             startActivity(android.content.Intent(this, com.pdfreader.app.update.UpdateActivity::class.java))
+        }
+
+        // Moved here from the Home menu
+        binding.switchWifiOnly.isChecked = prefs.downloadWifiOnly
+        binding.switchWifiOnly.setOnCheckedChangeListener { _, v -> prefs.downloadWifiOnly = v }
+        binding.rowBackup.setOnClickListener { BackupUi.show(this, prefs) }
+        binding.rowSyncHistory.setOnClickListener {
+            startActivity(android.content.Intent(this, com.pdfreader.app.ui.stats.SyncLogActivity::class.java))
+        }
+        binding.rowSwitchUser.setOnClickListener {
+            prefs.currentUser = ""
+            startActivity(
+                android.content.Intent(this, com.pdfreader.app.ui.auth.LoginActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+        }
+        buildThemePicker()
+    }
+
+    /** One tappable swatch per colour theme; the preview colours come from the theme itself. */
+    private fun buildThemePicker() {
+        val row = binding.themeRow
+        row.removeAllViews()
+        val selected = com.pdfreader.app.ui.base.Themes.currentKey(this)
+        val d = resources.displayMetrics.density
+        for (e in com.pdfreader.app.ui.base.Themes.all) {
+            val preview = android.view.ContextThemeWrapper(this, R.style.Theme_PDFReader)
+            if (e.overlay != 0) preview.theme.applyStyle(e.overlay, true)
+            fun c(attr: Int) = com.pdfreader.app.ui.base.ThemeColors.get(preview, attr)
+
+            val card = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                setPadding((10 * d).toInt(), (10 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 14 * d
+                    setColor(c(R.attr.kBackground))
+                    setStroke(
+                        ((if (e.key == selected) 3 else 1) * d).toInt(),
+                        if (e.key == selected) c(R.attr.kAccent) else c(R.attr.kDivider)
+                    )
+                }
+                isClickable = true
+                isFocusable = true
+                contentDescription = e.name
+            }
+            val dots = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL }
+            for (attr in intArrayOf(R.attr.kPrimary, R.attr.kBrand, R.attr.kAccent)) {
+                dots.addView(android.view.View(this).apply {
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.OVAL
+                        setColor(c(attr))
+                        setStroke((1 * d).toInt(), c(R.attr.kDivider))
+                    }
+                    layoutParams = android.widget.LinearLayout.LayoutParams((20 * d).toInt(), (20 * d).toInt()).apply {
+                        marginStart = (2 * d).toInt(); marginEnd = (2 * d).toInt()
+                    }
+                })
+            }
+            card.addView(dots)
+            card.addView(android.widget.TextView(this).apply {
+                text = e.name
+                textSize = 12f
+                setTextColor(c(R.attr.kTextPrimary))
+                setPadding(0, (6 * d).toInt(), 0, 0)
+            })
+            card.layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = (10 * d).toInt() }
+            card.setOnClickListener {
+                if (prefs.colorTheme != e.key) {
+                    prefs.colorTheme = e.key
+                    recreate()           // this screen comes back in the new colours; the others follow when shown
+                }
+            }
+            row.addView(card)
         }
     }
 

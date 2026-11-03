@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class HeatmapActivity : AppCompatActivity() {
+class HeatmapActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivityHeatmapBinding
     private lateinit var prefs: PreferenceManager
@@ -58,8 +58,8 @@ class HeatmapActivity : AppCompatActivity() {
         // Start from the Monday of the week 26 weeks ago
         val startDay = today - totalDays + 1
 
-        val accentColor = ContextCompat.getColor(this, R.color.accent)
-        val bgColor     = ContextCompat.getColor(this, R.color.card_bg)
+        val accentColor = com.pdfreader.app.ui.base.ThemeColors.get(this, R.attr.kAccent)
+        val bgColor     = com.pdfreader.app.ui.base.ThemeColors.get(this, R.attr.kCardBg)
 
         binding.heatmapGrid.removeAllViews()
         binding.heatmapGrid.columnCount = weeks

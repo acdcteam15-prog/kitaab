@@ -44,6 +44,11 @@ class PreferenceManager(context: Context) {
         set(v) = prefs.edit().putBoolean("rtl_page_order", v).apply()
 
     /** Queue downloads until the phone is on Wi-Fi (unmetered). */
+    /** Colour theme chosen in Settings (see ui/base/Themes.kt). */
+    var colorTheme: String
+        get() = prefs.getString("color_theme", "classic") ?: "classic"
+        set(v) = prefs.edit().putString("color_theme", v).apply()
+
     var downloadWifiOnly: Boolean
         get() = prefs.getBoolean("download_wifi_only", false)
         set(v) = prefs.edit().putBoolean("download_wifi_only", v).apply()

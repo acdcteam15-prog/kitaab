@@ -24,7 +24,7 @@
                 android:id="@+id/ivCover"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="@color/surface_variant"
+                android:background="?attr/kSurfaceVariant"
                 android:contentDescription="Book cover"
                 android:scaleType="centerCrop"/>
             <View
@@ -54,7 +54,7 @@
         android:ellipsize="end"
         android:gravity="center"
         android:lines="2"
-        android:textColor="@color/text_primary"
+        android:textColor="?attr/kTextPrimary"
         android:textSize="11sp"
         android:textStyle="bold"/>
 
@@ -62,6 +62,6 @@
         android:id="@+id/tvFinishedDate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/text_secondary"
+        android:textColor="?attr/kTextSecondary"
         android:textSize="10sp"/>
 </LinearLayout>

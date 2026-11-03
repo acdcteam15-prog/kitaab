@@ -22,7 +22,7 @@
                 android:id="@+id/ivCover"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:background="@color/surface_variant"
+                android:background="?attr/kSurfaceVariant"
                 android:contentDescription="Book cover"
                 android:scaleType="centerCrop"
                 android:transitionName="book_cover"
@@ -94,8 +94,8 @@
             android:layout_height="wrap_content"
             android:max="100"
             android:visibility="invisible"
-            app:indicatorColor="@color/accent"
-            app:trackColor="@color/progress_track"
+            app:indicatorColor="?attr/kAccent"
+            app:trackColor="?attr/kProgressTrack"
             app:trackThickness="4dp"
             app:indicatorTrackGapSize="0dp"
             app:trackStopIndicatorSize="0dp"/>
@@ -108,7 +108,7 @@
             android:layout_marginTop="8dp"
             android:ellipsize="end"
             android:lines="2"
-            android:textColor="@color/text_primary"
+            android:textColor="?attr/kTextPrimary"
             android:textSize="13sp"
             android:textStyle="bold"/>
 
@@ -131,7 +131,7 @@
                 android:insetBottom="0dp"
                 android:text="Read"
                 android:textAllCaps="false"
-                android:textColor="@color/brand"
+                android:textColor="?attr/kBrand"
                 android:textSize="13sp"
                 android:textStyle="bold"/>
 
@@ -141,9 +141,9 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:visibility="gone"
-                app:backgroundTint="@color/accent"
+                app:backgroundTint="?attr/kAccent"
                 app:icon="@android:drawable/stat_sys_download"
-                app:iconTint="@color/text_on_accent"/>
+                app:iconTint="?attr/kTextOnAccent"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDeleteLocal"
@@ -152,7 +152,7 @@
                 android:layout_height="40dp"
                 android:visibility="gone"
                 app:icon="@android:drawable/ic_menu_delete"
-                app:iconTint="@color/text_secondary"/>
+                app:iconTint="?attr/kTextSecondary"/>
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

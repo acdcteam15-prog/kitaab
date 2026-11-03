@@ -68,7 +68,7 @@ import java.io.IOException
 import java.util.UUID
 import kotlin.math.abs
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private val TAG = "HomeActivity"
 
@@ -174,7 +174,7 @@ class HomeActivity : AppCompatActivity() {
                         else                    -> "✓ All changes synced"
                     }
                     binding.tvSyncStatus.setTextColor(
-                        if (pending > 0 || up.count > 0) getColor(R.color.accent_dark) else getColor(android.R.color.holo_green_dark)
+                        if (pending > 0 || up.count > 0) themeColor(R.attr.kAccentDark) else getColor(android.R.color.holo_green_dark)
                     )
                 }
             }
@@ -370,69 +370,7 @@ class HomeActivity : AppCompatActivity() {
             }.show()
     }
 
-    // ── Backup & restore (#13) ───────────────────────────────────────────────
-
-    private fun showBackupDialog() {
-        val backup = com.pdfreader.app.data.backup.BackupManager(this)
-        val last = prefs.lastBackupAt
-        val lastText = if (last > 0) "Last backup: " + SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault()).format(Date(last))
-                       else "No backup yet"
-        AlertDialog.Builder(this)
-            .setTitle("💾 Backup & restore")
-            .setMessage("$lastText\n\nBacks up progress, markers, finished books, bookmarks, highlights & notes to your Google Drive. " +
-                "A backup is also made automatically every week.\n\nRestoring merges — it never overwrites newer reading.")
-            .setPositiveButton("Back up now") { _, _ ->
-                Toast.makeText(this, "Backing up…", Toast.LENGTH_SHORT).show()
-                lifecycleScope.launch {
-                    backup.backupNow().fold(
-                        onSuccess = { Toast.makeText(this@HomeActivity, "✓ Backup saved to Drive", Toast.LENGTH_SHORT).show() },
-                        onFailure = { Toast.makeText(this@HomeActivity, "Backup failed: ${it.message}", Toast.LENGTH_LONG).show() }
-                    )
-                }
-            }
-            .setNeutralButton("Restore…") { _, _ -> showRestoreList(backup) }
-            .setNegativeButton("Close", null)
-            .show()
-    }
-
-    private fun showRestoreList(backup: com.pdfreader.app.data.backup.BackupManager) {
-        lifecycleScope.launch {
-            val items = try { backup.list() } catch (e: Exception) { emptyList() }
-            if (items.isEmpty()) {
-                Toast.makeText(this@HomeActivity, "No backups found on Drive", Toast.LENGTH_SHORT).show()
-                return@launch
-            }
-            val sdf = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())
-            val labels = items.map { "${sdf.format(Date(it.time))}   •   ${it.sizeBytes / 1024} KB" }.toTypedArray()
-            AlertDialog.Builder(this@HomeActivity)
-                .setTitle("Restore from backup")
-                .setItems(labels) { _, i ->
-                    AlertDialog.Builder(this@HomeActivity)
-                        .setTitle("Restore ${labels[i].substringBefore("   ")}?")
-                        .setMessage("Anything newer on this phone is kept. Restored items will sync to your other device.")
-                        .setPositiveButton("Restore") { _, _ ->
-                            lifecycleScope.launch {
-                                backup.restore(items[i].fileId).fold(
-                                    onSuccess = { r ->
-                                        app.requestSync("restore")
-                                        AlertDialog.Builder(this@HomeActivity).setTitle("✓ Restore complete")
-                                            .setMessage("Books: ${r.progress}\nBookmarks: ${r.bookmarks}\n" +
-                                                "Highlights & notes: ${r.highlights}\nCategories: ${r.categories}\n\n" +
-                                                "(Items already up to date were left as they are.)")
-                                            .setPositiveButton("OK", null).show()
-                                        loadBooks()
-                                    },
-                                    onFailure = { Toast.makeText(this@HomeActivity, "Restore failed: ${it.message}", Toast.LENGTH_LONG).show() }
-                                )
-                            }
-                        }
-                        .setNegativeButton("Cancel", null).show()
-                }
-                .setNegativeButton("Close", null).show()
-        }
-    }
-
-    // ── Add a PDF: pick → (preview & edit | upload now) → Drive ──────────────
+    // Upload status (Backup & restore moved to Settings)
 
     private data class UploadStatus(val count: Int = 0, val progress: Int = -1, val name: String = "")
 
@@ -935,7 +873,7 @@ class HomeActivity : AppCompatActivity() {
             app.requestSync("pull-to-refresh")
             loadBooks()
         }
-        binding.swipeRefresh.setColorSchemeResources(R.color.accent)
+        binding.swipeRefresh.setColorSchemeColors(themeColor(R.attr.kAccent))
     }
 
     private fun loadBooks() {
@@ -1104,30 +1042,17 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_home, menu)
-        menu.findItem(R.id.action_wifi_only)?.isChecked = prefs.downloadWifiOnly
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         R.id.action_refresh     -> { app.requestSync("menu-refresh"); loadBooks(); true }
         R.id.action_sort        -> { showSortDialog(); true }
-        R.id.action_wifi_only   -> {
-            prefs.downloadWifiOnly = !prefs.downloadWifiOnly
-            item.isChecked = prefs.downloadWifiOnly
-            Toast.makeText(this, if (prefs.downloadWifiOnly) "📶 New downloads wait for Wi-Fi" else "Downloads use any connection", Toast.LENGTH_SHORT).show()
-            true
-        }
-        R.id.action_backup      -> { showBackupDialog(); true }
         R.id.action_finished    -> { startActivity(Intent(this, FinishedShelfActivity::class.java)); true }
         R.id.action_shelves     -> { startActivity(Intent(this, com.pdfreader.app.ui.shelves.ShelvesActivity::class.java)); true }
         R.id.action_stats       -> { startActivity(Intent(this, StatsActivity::class.java)); true }
         R.id.action_heatmap     -> { startActivity(Intent(this, com.pdfreader.app.ui.stats.HeatmapActivity::class.java)); true }
-        R.id.action_sync_log    -> { startActivity(Intent(this, com.pdfreader.app.ui.stats.SyncLogActivity::class.java)); true }
         R.id.action_settings    -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
-        R.id.action_switch_user -> {
-            prefs.currentUser = ""
-            startActivity(Intent(this, LoginActivity::class.java)); finish(); true
-        }
         else -> super.onOptionsItemSelected(item)
     }
 }

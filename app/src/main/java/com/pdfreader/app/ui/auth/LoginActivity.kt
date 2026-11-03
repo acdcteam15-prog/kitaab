@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * Step 1: sign in with Google (required). Step 2: type a name; the app creates
  * My Drive / books / <name> if it is missing. Then the Home screen opens.
  */
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivityLoginBinding
     private lateinit var signInClient: GoogleSignInClient

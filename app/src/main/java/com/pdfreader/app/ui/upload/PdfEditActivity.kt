@@ -48,7 +48,7 @@ import java.util.UUID
  *
  * Takes ownership of the staged file passed in [EXTRA_PATH]. Results: RESULT_OK = upload queued.
  */
-class PdfEditActivity : AppCompatActivity() {
+class PdfEditActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     companion object {
         const val EXTRA_PATH = "path"
@@ -130,7 +130,7 @@ class PdfEditActivity : AppCompatActivity() {
     private fun setupInsets() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-        window.navigationBarColor = getColor(R.color.surface)
+        window.navigationBarColor = themeColor(R.attr.kSurface)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             binding.appBar.updatePadding(top = bars.top)

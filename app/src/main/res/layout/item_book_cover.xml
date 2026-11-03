@@ -19,7 +19,7 @@
             android:id="@+id/ivCover"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/surface_variant"
+            android:background="?attr/kSurfaceVariant"
             android:contentDescription="Book cover"
             android:scaleType="centerCrop"/>
 
@@ -30,7 +30,7 @@
             android:layout_gravity="bottom"
             android:max="100"
             android:visibility="gone"
-            app:indicatorColor="@color/accent"
+            app:indicatorColor="?attr/kAccent"
             app:trackColor="#66000000"
             app:trackThickness="4dp"
             app:indicatorTrackGapSize="0dp"
@@ -44,7 +44,7 @@
         android:layout_marginTop="6dp"
         android:ellipsize="end"
         android:maxLines="2"
-        android:textColor="@color/text_primary"
+        android:textColor="?attr/kTextPrimary"
         android:textSize="12sp"
         android:textStyle="bold"/>
 

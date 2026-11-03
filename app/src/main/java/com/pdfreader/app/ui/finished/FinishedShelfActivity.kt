@@ -43,7 +43,7 @@ import java.util.Locale
  * shelves. Records live in Room + Drive, not in the PDF folder, so they survive deleting
  * the PDF on either device.
  */
-class FinishedShelfActivity : AppCompatActivity() {
+class FinishedShelfActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivityFinishedShelfBinding
     private lateinit var prefs: PreferenceManager
@@ -135,7 +135,7 @@ class FinishedShelfActivity : AppCompatActivity() {
                     .coerceAtLeast((3 * d).toInt()), 1f).apply { marginStart = (3 * d).toInt(); marginEnd = (3 * d).toInt() }
                 background = android.graphics.drawable.GradientDrawable().apply {
                     cornerRadius = 4 * d
-                    setColor(if (perMonth[i] > 0) getColor(R.color.accent) else 0x33FFFFFF)
+                    setColor(if (perMonth[i] > 0) themeColor(R.attr.kAccent) else 0x33FFFFFF)
                 }
                 pivotY = 72 * d
                 scaleY = 0f

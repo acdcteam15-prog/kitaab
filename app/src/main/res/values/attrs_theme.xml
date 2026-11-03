@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The colour palette as theme attributes, so the colour theme can be chosen in Settings -->
+    <attr name="kPrimary" format="color|reference"/>
+    <attr name="kPrimaryDark" format="color|reference"/>
+    <attr name="kPrimaryLight" format="color|reference"/>
+    <attr name="kBrand" format="color|reference"/>
+    <attr name="kOnBrand" format="color|reference"/>
+    <attr name="kAccent" format="color|reference"/>
+    <attr name="kAccentDark" format="color|reference"/>
+    <attr name="kSuccess" format="color|reference"/>
+    <attr name="kBackground" format="color|reference"/>
+    <attr name="kSurface" format="color|reference"/>
+    <attr name="kCardBg" format="color|reference"/>
+    <attr name="kSurfaceVariant" format="color|reference"/>
+    <attr name="kSkeleton" format="color|reference"/>
+    <attr name="kTextPrimary" format="color|reference"/>
+    <attr name="kTextSecondary" format="color|reference"/>
+    <attr name="kTextOnDark" format="color|reference"/>
+    <attr name="kTextOnAccent" format="color|reference"/>
+    <attr name="kProgressTrack" format="color|reference"/>
+    <attr name="kDivider" format="color|reference"/>
+</resources>

@@ -4,19 +4,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?attr/kBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary"
+        android:background="?attr/kPrimary"
         android:theme="@style/ToolbarTheme"
         app:elevation="0dp">
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:titleTextColor="@color/text_on_dark"/>
+            app:titleTextColor="?attr/kTextOnDark"/>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -162,7 +162,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="No finished books yet"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/kTextPrimary"
                     android:textSize="18sp"
                     android:textStyle="bold"/>
                 <TextView
@@ -171,7 +171,7 @@
                     android:layout_marginTop="6dp"
                     android:gravity="center"
                     android:text="When you reach the last page, choose “Move to Finished”. The record stays here even after you delete the PDF."
-                    android:textColor="@color/text_secondary"
+                    android:textColor="?attr/kTextSecondary"
                     android:textSize="13sp"/>
             </LinearLayout>
         </LinearLayout>

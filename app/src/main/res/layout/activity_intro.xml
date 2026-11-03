@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/primary"
+    android:background="?attr/kPrimary"
     android:fitsSystemWindows="true"
     android:orientation="vertical"
     android:padding="28dp">
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:gravity="center"
-            android:textColor="@color/text_on_dark"
+            android:textColor="?attr/kTextOnDark"
             android:textSize="26sp"
             android:textStyle="bold"/>
 
@@ -47,7 +47,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:textColor="@color/accent"
+        android:textColor="?attr/kAccent"
         android:textSize="20sp"/>
 
     <LinearLayout
@@ -77,8 +77,8 @@
             android:minWidth="140dp"
             android:text="@string/intro_next"
             android:textStyle="bold"
-            android:backgroundTint="@color/accent"
-            android:textColor="@color/text_on_accent"
+            android:backgroundTint="?attr/kAccent"
+            android:textColor="?attr/kTextOnAccent"
             app:cornerRadius="26dp"/>
     </LinearLayout>
 </LinearLayout>

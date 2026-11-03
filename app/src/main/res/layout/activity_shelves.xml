@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:background="@color/background">
+    android:background="?attr/kBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -15,8 +15,8 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/primary"
-            app:titleTextColor="@color/text_on_dark"
+            android:background="?attr/kPrimary"
+            app:titleTextColor="?attr/kTextOnDark"
             app:popupTheme="@style/OverflowMenuStyle"/>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -34,7 +34,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="No shelves yet.\nLong-press a book in the library to assign it to a shelf."
-        android:textColor="@color/text_secondary"
+        android:textColor="?attr/kTextSecondary"
         android:textSize="14sp"
         android:gravity="center"
         android:padding="32dp"
@@ -48,6 +48,6 @@
         android:layout_margin="16dp"
         android:contentDescription="Create shelf"
         app:srcCompat="@android:drawable/ic_input_add"
-        android:backgroundTint="@color/accent"/>
+        android:backgroundTint="?attr/kAccent"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

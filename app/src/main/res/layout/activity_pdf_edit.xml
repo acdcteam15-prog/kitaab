@@ -4,7 +4,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?attr/kBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,7 +16,7 @@
             android:id="@+id/appBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/primary"
+            android:background="?attr/kPrimary"
             android:orientation="vertical"
             android:theme="@style/ToolbarTheme">
 
@@ -25,7 +25,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
                 app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
-                app:titleTextColor="@color/text_on_dark"/>
+                app:titleTextColor="?attr/kTextOnDark"/>
         </LinearLayout>
 
         <LinearLayout
@@ -57,7 +57,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textColor="@color/text_primary"
+                android:textColor="?attr/kTextPrimary"
                 android:textSize="13sp"
                 android:textStyle="bold"/>
 
@@ -83,7 +83,7 @@
             android:id="@+id/bottomBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/surface"
+            android:background="?attr/kSurface"
             android:elevation="8dp"
             android:orientation="vertical"
             android:paddingHorizontal="@dimen/space_m"
@@ -95,10 +95,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:text="Save &amp; upload"
-                android:textColor="@color/text_on_accent"
+                android:textColor="?attr/kTextOnAccent"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                app:backgroundTint="@color/accent"
+                app:backgroundTint="?attr/kAccent"
                 app:cornerRadius="26dp"/>
         </LinearLayout>
     </LinearLayout>
@@ -124,7 +124,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:indeterminate="true"
-                app:indicatorColor="@color/accent"/>
+                app:indicatorColor="?attr/kAccent"/>
 
             <TextView
                 android:id="@+id/tvBusy"

@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
-class StatsActivity : AppCompatActivity() {
+class StatsActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivityStatsBinding
     private lateinit var prefs: PreferenceManager

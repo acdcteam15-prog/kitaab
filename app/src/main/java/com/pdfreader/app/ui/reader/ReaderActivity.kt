@@ -49,7 +49,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.roundToInt
 
-class ReaderActivity : AppCompatActivity() {
+class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivityReaderBinding
     private lateinit var prefs: PreferenceManager
@@ -160,7 +160,7 @@ class ReaderActivity : AppCompatActivity() {
     private fun offerJump(page: Int) {
         Snackbar.make(binding.root, "📱 Your other device is on page ${page + 1}", 8_000)
             .setAction("Jump") { goTo(page, true) }
-            .setActionTextColor(getColor(R.color.accent))
+            .setActionTextColor(themeColor(R.attr.kAccent))
             .show()
     }
 
@@ -509,7 +509,7 @@ class ReaderActivity : AppCompatActivity() {
             progressRepo.saveHighlight(h)
             Snackbar.make(binding.root, "🖍 Highlighted", Snackbar.LENGTH_LONG)
                 .setAction("Add note") { editHighlight(h) }
-                .setActionTextColor(getColor(R.color.accent))
+                .setActionTextColor(themeColor(R.attr.kAccent))
                 .show()
         }
     }
@@ -547,7 +547,7 @@ class ReaderActivity : AppCompatActivity() {
                 val v = colors.getChildAt(i); val c = v.tag as Int
                 v.background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(c)
-                    if (c == color) setStroke((3 * d).toInt(), getColor(R.color.text_primary))
+                    if (c == color) setStroke((3 * d).toInt(), themeColor(R.attr.kTextPrimary))
                 }
             }
         }
@@ -1231,7 +1231,7 @@ class ReaderActivity : AppCompatActivity() {
         endPromptShown = true
         Snackbar.make(binding.root, "🎉 You reached the end of this book", Snackbar.LENGTH_INDEFINITE)
             .setAction("Move to Finished") { markFinished() }
-            .setActionTextColor(getColor(R.color.accent))
+            .setActionTextColor(themeColor(R.attr.kAccent))
             .show()
     }
 
@@ -1435,7 +1435,7 @@ class ReaderActivity : AppCompatActivity() {
                     setColor(if (theme.nightFilterColor != android.graphics.Color.TRANSPARENT)
                         blend(theme.backgroundColor, theme.nightFilterColor) else theme.backgroundColor)
                     setStroke(((if (selected) 3 else 1) * d).toInt(),
-                        if (selected) getColor(R.color.accent) else getColor(R.color.divider))
+                        if (selected) themeColor(R.attr.kAccent) else themeColor(R.attr.kDivider))
                 }
                 contentDescription = theme.label
                 setOnClickListener {
@@ -1455,9 +1455,9 @@ class ReaderActivity : AppCompatActivity() {
             t.tvTileIcon.text = icon
             t.tvTileLabel.text = label
             val card = t.root
-            card.setCardBackgroundColor(if (on) blendAlpha(getColor(R.color.brand), 0.18f) else getColor(R.color.surface_variant))
-            card.strokeColor = if (on) getColor(R.color.brand) else android.graphics.Color.TRANSPARENT
-            t.tvTileLabel.setTextColor(if (on) getColor(R.color.brand) else getColor(R.color.text_secondary))
+            card.setCardBackgroundColor(if (on) blendAlpha(themeColor(R.attr.kBrand), 0.18f) else themeColor(R.attr.kSurfaceVariant))
+            card.strokeColor = if (on) themeColor(R.attr.kBrand) else android.graphics.Color.TRANSPARENT
+            t.tvTileLabel.setTextColor(if (on) themeColor(R.attr.kBrand) else themeColor(R.attr.kTextSecondary))
             card.setOnClickListener { dialog.dismiss(); click() }
             into.addView(card)
         }
@@ -1485,10 +1485,10 @@ class ReaderActivity : AppCompatActivity() {
                 isAllCaps = false
                 layoutParams = android.widget.LinearLayout.LayoutParams(0,
                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = (6 * d).toInt() }
-                setTextColor(if (on) getColor(R.color.on_brand) else getColor(R.color.text_primary))
+                setTextColor(if (on) themeColor(R.attr.kOnBrand) else themeColor(R.attr.kTextPrimary))
                 backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    if (on) getColor(R.color.brand) else android.graphics.Color.TRANSPARENT)
-                strokeColor = android.content.res.ColorStateList.valueOf(getColor(R.color.divider))
+                    if (on) themeColor(R.attr.kBrand) else android.graphics.Color.TRANSPARENT)
+                strokeColor = android.content.res.ColorStateList.valueOf(themeColor(R.attr.kDivider))
                 setOnClickListener {
                     prefs.pinStyle = key
                     applyPinStyle()

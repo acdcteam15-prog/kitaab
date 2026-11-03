@@ -8,7 +8,7 @@ import com.pdfreader.app.R
 import com.pdfreader.app.databinding.ActivityIntroBinding
 
 /** The few short steps shown the first time the app is opened. */
-class IntroActivity : AppCompatActivity() {
+class IntroActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var b: ActivityIntroBinding
     private var index = 0

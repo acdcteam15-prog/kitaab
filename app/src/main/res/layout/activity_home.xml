@@ -4,14 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?attr/kBackground">
 
     <!-- ═══ Collapsing header: greeting + search, shrinks to a toolbar ═══ -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary"
+        android:background="?attr/kPrimary"
         android:theme="@style/ToolbarTheme"
         app:elevation="0dp">
 
@@ -19,8 +19,8 @@
             android:id="@+id/collapsingToolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:contentScrim="@color/primary"
-            app:statusBarScrim="@color/primary"
+            app:contentScrim="?attr/kPrimary"
+            app:statusBarScrim="?attr/kPrimary"
             app:titleEnabled="false"
             app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
 
@@ -92,7 +92,7 @@
                 android:layout_height="?attr/actionBarSize"
                 android:background="@android:color/transparent"
                 app:layout_collapseMode="pin"
-                app:titleTextColor="@color/text_on_dark"
+                app:titleTextColor="?attr/kTextOnDark"
                 app:popupTheme="@style/OverflowMenuStyle"/>
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
@@ -129,13 +129,13 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/accent">
+                    app:cardBackgroundColor="?attr/kAccent">
                     <TextView
                         android:id="@+id/tvUpdateBanner"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:padding="12dp"
-                        android:textColor="@color/text_on_accent"
+                        android:textColor="?attr/kTextOnAccent"
                         android:textSize="14sp"
                         android:textStyle="bold"/>
                 </com.google.android.material.card.MaterialCardView>
@@ -180,7 +180,7 @@
                         android:background="@drawable/bg_pill"
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="5dp"
-                        android:textColor="@color/accent_dark"
+                        android:textColor="?attr/kAccentDark"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:visibility="gone"/>
@@ -244,7 +244,7 @@
                             android:id="@+id/ivContinueCover"
                             android:layout_width="92dp"
                             android:layout_height="136dp"
-                            android:background="@color/primary_light"
+                            android:background="?attr/kPrimaryLight"
                             android:elevation="4dp"
                             android:scaleType="centerCrop"
                             android:transitionName="book_cover"
@@ -292,7 +292,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="10dp"
                                 android:max="100"
-                                app:indicatorColor="@color/accent"
+                                app:indicatorColor="?attr/kAccent"
                                 app:trackColor="#33FFFFFF"
                                 app:trackCornerRadius="4dp"
                                 app:trackThickness="6dp"
@@ -310,10 +310,10 @@
                                 android:paddingHorizontal="20dp"
                                 android:paddingVertical="8dp"
                                 android:text="Continue  ›"
-                                android:textColor="@color/text_on_accent"
+                                android:textColor="?attr/kTextOnAccent"
                                 android:textSize="13sp"
                                 android:textStyle="bold"
-                                app:backgroundTint="@color/accent"
+                                app:backgroundTint="?attr/kAccent"
                                 app:cornerRadius="20dp"/>
                         </LinearLayout>
                     </LinearLayout>
@@ -339,13 +339,13 @@
                             <TextView style="@style/Widget.Kitaab.StatLabel" android:text="pages this week"/>
                         </LinearLayout>
                         <View android:layout_width="1dp" android:layout_height="36dp"
-                            android:layout_gravity="center_vertical" android:background="@color/divider"/>
+                            android:layout_gravity="center_vertical" android:background="?attr/kDivider"/>
                         <LinearLayout style="@style/Widget.Kitaab.StatCell">
                             <TextView android:id="@+id/tvWeekMinutes" style="@style/Widget.Kitaab.StatValue" android:text="0"/>
                             <TextView style="@style/Widget.Kitaab.StatLabel" android:text="minutes"/>
                         </LinearLayout>
                         <View android:layout_width="1dp" android:layout_height="36dp"
-                            android:layout_gravity="center_vertical" android:background="@color/divider"/>
+                            android:layout_gravity="center_vertical" android:background="?attr/kDivider"/>
                         <LinearLayout style="@style/Widget.Kitaab.StatCell">
                             <TextView android:id="@+id/tvWeekDays" style="@style/Widget.Kitaab.StatValue" android:text="0"/>
                             <TextView style="@style/Widget.Kitaab.StatLabel" android:text="days active"/>
@@ -401,7 +401,7 @@
                             android:padding="8dp"
                             android:layout_marginEnd="8dp"
                             android:text="See all ›"
-                            android:textColor="@color/brand"
+                            android:textColor="?attr/kBrand"
                             android:textSize="13sp"
                             android:textStyle="bold"/>
                     </LinearLayout>
@@ -473,7 +473,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
                         android:text="@string/no_books_title"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?attr/kTextPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"/>
                     <TextView
@@ -483,7 +483,7 @@
                         android:gravity="center"
                         android:lineSpacingExtra="4dp"
                         android:text="@string/no_books_body"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="?attr/kTextSecondary"
                         android:textSize="14sp"/>
                 </LinearLayout>
 
@@ -508,7 +508,7 @@
         android:layout_margin="@dimen/space_m"
         android:contentDescription="Add PDF"
         android:src="@drawable/ic_add"
-        app:backgroundTint="@color/accent"
-        app:tint="@color/text_on_accent"/>
+        app:backgroundTint="?attr/kAccent"
+        app:tint="?attr/kTextOnAccent"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

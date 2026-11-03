@@ -3,25 +3,45 @@
 
     <!-- Material 3, follows the system light/dark setting (colors swap via values-night) -->
     <style name="Theme.PDFReader" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/brand</item>
-        <item name="colorOnPrimary">@color/on_brand</item>
-        <item name="colorPrimaryContainer">@color/surface_variant</item>
-        <item name="colorSecondary">@color/accent</item>
-        <item name="colorOnSecondary">@color/text_on_accent</item>
-        <item name="colorAccent">@color/accent</item>
-        <item name="colorControlActivated">@color/accent</item>
-        <item name="colorSurface">@color/surface</item>
-        <item name="colorOnSurface">@color/text_primary</item>
-        <item name="colorSurfaceVariant">@color/surface_variant</item>
-        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
-        <item name="colorOutline">@color/divider</item>
-        <item name="android:colorBackground">@color/background</item>
-        <item name="android:windowBackground">@color/background</item>
-        <item name="android:statusBarColor">@color/primary</item>
+        <!-- Palette attributes (the default "Classic" theme). Other themes override them, see themes_palettes.xml -->
+        <item name="kPrimary">@color/primary</item>
+        <item name="kPrimaryDark">@color/primary_dark</item>
+        <item name="kPrimaryLight">@color/primary_light</item>
+        <item name="kBrand">@color/brand</item>
+        <item name="kOnBrand">@color/on_brand</item>
+        <item name="kAccent">@color/accent</item>
+        <item name="kAccentDark">@color/accent_dark</item>
+        <item name="kSuccess">@color/success</item>
+        <item name="kBackground">@color/background</item>
+        <item name="kSurface">@color/surface</item>
+        <item name="kCardBg">@color/card_bg</item>
+        <item name="kSurfaceVariant">@color/surface_variant</item>
+        <item name="kSkeleton">@color/skeleton</item>
+        <item name="kTextPrimary">@color/text_primary</item>
+        <item name="kTextSecondary">@color/text_secondary</item>
+        <item name="kTextOnDark">@color/text_on_dark</item>
+        <item name="kTextOnAccent">@color/text_on_accent</item>
+        <item name="kProgressTrack">@color/progress_track</item>
+        <item name="kDivider">@color/divider</item>
+        <item name="colorPrimary">?attr/kBrand</item>
+        <item name="colorOnPrimary">?attr/kOnBrand</item>
+        <item name="colorPrimaryContainer">?attr/kSurfaceVariant</item>
+        <item name="colorSecondary">?attr/kAccent</item>
+        <item name="colorOnSecondary">?attr/kTextOnAccent</item>
+        <item name="colorAccent">?attr/kAccent</item>
+        <item name="colorControlActivated">?attr/kAccent</item>
+        <item name="colorSurface">?attr/kSurface</item>
+        <item name="colorOnSurface">?attr/kTextPrimary</item>
+        <item name="colorSurfaceVariant">?attr/kSurfaceVariant</item>
+        <item name="colorOnSurfaceVariant">?attr/kTextSecondary</item>
+        <item name="colorOutline">?attr/kDivider</item>
+        <item name="android:colorBackground">?attr/kBackground</item>
+        <item name="android:windowBackground">?attr/kBackground</item>
+        <item name="android:statusBarColor">?attr/kPrimary</item>
         <!-- Android 15+: apps targeting API 35 are drawn edge-to-edge by force, which put the toolbars under the
              status bar on screens that do not handle insets. Opt out so the system bars keep their own space. -->
         <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
-        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:navigationBarColor">?attr/kBackground</item>
         <item name="materialCardViewStyle">@style/Kitaab.Card</item>
         <item name="shapeAppearanceCornerMedium">@style/Kitaab.Shape.Medium</item>
         <item name="android:windowActivityTransitions">true</item>
@@ -29,7 +49,7 @@
 
     <!-- Cards: elevated, soft, no outline -->
     <style name="Kitaab.Card" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardBackgroundColor">@color/card_bg</item>
+        <item name="cardBackgroundColor">?attr/kCardBg</item>
         <item name="cardCornerRadius">@dimen/radius_card</item>
         <item name="cardElevation">2dp</item>
     </style>
@@ -41,15 +61,15 @@
 
     <!-- Typography -->
     <style name="Kitaab.Text.Display" parent="TextAppearance.Material3.HeadlineSmall">
-        <item name="android:textColor">@color/text_on_dark</item>
+        <item name="android:textColor">?attr/kTextOnDark</item>
         <item name="android:textStyle">bold</item>
     </style>
     <style name="Kitaab.Text.Section" parent="TextAppearance.Material3.TitleMedium">
-        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColor">?attr/kTextPrimary</item>
         <item name="android:textStyle">bold</item>
     </style>
     <style name="Kitaab.Text.Caption" parent="TextAppearance.Material3.BodySmall">
-        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textColor">?attr/kTextSecondary</item>
     </style>
 
     <style name="ChipStyle" parent="Widget.Material3.Chip.Filter">
@@ -66,10 +86,13 @@
         <item name="colorControlNormal">#FFFFFF</item>
     </style>
 
-    <!-- Referenced in activity_home.xml and activity_stats.xml as popupTheme -->
-    <style name="OverflowMenuStyle" parent="ThemeOverlay.Material3.Dark">
-        <item name="android:textColor">#FFFFFF</item>
-        <item name="android:background">#1C1B2E</item>
+    <!-- Referenced in activity_home.xml and activity_stats.xml as popupTheme: follows the chosen colour theme -->
+    <style name="OverflowMenuStyle" parent="ThemeOverlay.Material3">
+        <item name="android:textColor">?attr/kTextPrimary</item>
+        <item name="android:textColorPrimary">?attr/kTextPrimary</item>
+        <item name="android:colorBackground">?attr/kSurface</item>
+        <item name="colorSurface">?attr/kSurface</item>
+        <item name="colorOnSurface">?attr/kTextPrimary</item>
     </style>
 
     <!-- Used by activity_reader.xml -->
@@ -98,7 +121,7 @@
         <item name="android:letterSpacing">0.08</item>
         <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textColor">?attr/kTextSecondary</item>
     </style>
     <style name="Widget.Kitaab.YearValue" parent="">
         <item name="android:layout_width">wrap_content</item>
@@ -126,13 +149,13 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">22sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/accent_dark</item>
+        <item name="android:textColor">?attr/kAccentDark</item>
     </style>
     <style name="Widget.Kitaab.StatLabel" parent="">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">11sp</item>
-        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textColor">?attr/kTextSecondary</item>
     </style>
 
 </resources>

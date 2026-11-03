@@ -5,35 +5,25 @@
         android:title="Refresh"
         android:icon="@android:drawable/ic_menu_rotate"
         app:showAsAction="ifRoom"/>
+    <!-- Library -->
     <item android:id="@+id/action_sort"
-        android:title="📋 Sort Books"
+        android:title="Sort books"
         app:showAsAction="never"/>
     <item android:id="@+id/action_finished"
-        android:title="🏆 Finished Shelf"
+        android:title="Finished shelf"
         app:showAsAction="never"/>
     <item android:id="@+id/action_shelves"
-        android:title="📚 My Shelves"
+        android:title="My shelves"
         app:showAsAction="never"/>
+    <!-- Reading -->
     <item android:id="@+id/action_heatmap"
-        android:title="📅 Reading Heatmap"
-        app:showAsAction="never"/>
-    <item android:id="@+id/action_wifi_only"
-        android:title="📶 Download on Wi-Fi only"
-        android:checkable="true"
-        app:showAsAction="never"/>
-    <item android:id="@+id/action_backup"
-        android:title="💾 Backup &amp; restore"
-        app:showAsAction="never"/>
-    <item android:id="@+id/action_sync_log"
-        android:title="☁ Sync History"
+        android:title="Reading heatmap"
         app:showAsAction="never"/>
     <item android:id="@+id/action_stats"
-        android:title="📊 Reading Stats"
+        android:title="Reading stats"
         app:showAsAction="never"/>
+    <!-- Wi-Fi only, Backup &amp; restore, Sync history and Switch user are in Settings -->
     <item android:id="@+id/action_settings"
-        android:title="⚙️ Settings"
-        app:showAsAction="never"/>
-    <item android:id="@+id/action_switch_user"
-        android:title="👤 Switch User"
+        android:title="Settings"
         app:showAsAction="never"/>
 </menu>

@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** The Updates screen: version, release notes, check, skip, download and one-tap install. */
-class UpdateActivity : AppCompatActivity() {
+class UpdateActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var b: ActivityUpdateBinding
     private lateinit var repo: UpdateRepository

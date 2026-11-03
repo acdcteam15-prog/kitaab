@@ -28,7 +28,7 @@ import java.util.*
  * Sync History: every push, pull, conflict and error, newest first, updating live.
  * Lets you see exactly what happened between the two devices.
  */
-class SyncLogActivity : AppCompatActivity() {
+class SyncLogActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivitySyncLogBinding
     private lateinit var prefs: PreferenceManager
@@ -87,11 +87,11 @@ class SyncEventAdapter : ListAdapter<SyncEvent, SyncEventAdapter.VH>(Diff()) {
         val e = getItem(position)
         val ctx = holder.b.root.context
         val (label, color) = when (e.type) {
-            "PUSH"     -> "⬆ Sent"       to ctx.getColor(R.color.brand)
-            "PULL"     -> "⬇ Received"   to ctx.getColor(R.color.success)
-            "CONFLICT" -> "⚖ Merged"     to ctx.getColor(R.color.accent_dark)
+            "PUSH"     -> "⬆ Sent"       to com.pdfreader.app.ui.base.ThemeColors.get(ctx, R.attr.kBrand)
+            "PULL"     -> "⬇ Received"   to com.pdfreader.app.ui.base.ThemeColors.get(ctx, R.attr.kSuccess)
+            "CONFLICT" -> "⚖ Merged"     to com.pdfreader.app.ui.base.ThemeColors.get(ctx, R.attr.kAccentDark)
             "ERROR"    -> "⚠ Failed"     to ctx.getColor(android.R.color.holo_red_light)
-            else       -> "↻ Sync"       to ctx.getColor(R.color.text_secondary)
+            else       -> "↻ Sync"       to com.pdfreader.app.ui.base.ThemeColors.get(ctx, R.attr.kTextSecondary)
         }
         holder.b.tvSyncBookName.text = e.bookName.ifEmpty { if (e.type == "ERROR") "Sync error" else "Library" }
             .removePrefix("Emailing ").replace('_', ' ')
