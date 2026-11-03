@@ -129,6 +129,15 @@ class PdfEditActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private fun setupInsets() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Keep the window the same size when the bars hide: draw under the camera cut-out as well
+        // (otherwise Android letterboxes the page below the notch and it jumps)
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            val lp = window.attributes
+            lp.layoutInDisplayCutoutMode =
+                if (android.os.Build.VERSION.SDK_INT >= 30) android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                else android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            window.attributes = lp
+        }
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
         window.navigationBarColor = themeColor(R.attr.kSurface)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->

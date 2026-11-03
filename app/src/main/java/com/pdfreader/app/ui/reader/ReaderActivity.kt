@@ -105,6 +105,15 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         // Edge-to-edge: the page uses the whole screen; bars float over it
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
+        // Keep the window the same size when the bars hide: draw under the camera cut-out as well
+        // (otherwise Android letterboxes the page below the notch and it jumps)
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            val lp = window.attributes
+            lp.layoutInDisplayCutoutMode =
+                if (android.os.Build.VERSION.SDK_INT >= 30) android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                else android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            window.attributes = lp
+        }
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         binding = ActivityReaderBinding.inflate(layoutInflater)
         setContentView(binding.root)
