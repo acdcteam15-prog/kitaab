@@ -3,6 +3,7 @@ package com.pdfreader.app.ui.base
 import android.app.Activity
 import android.content.Context
 import androidx.annotation.StyleRes
+import androidx.appcompat.app.AppCompatDelegate
 import com.pdfreader.app.R
 import com.pdfreader.app.utils.PreferenceManager
 
@@ -16,6 +17,9 @@ object Themes {
 
     val all: List<Entry> = listOf(
         Entry("classic", "Classic", 0),
+        Entry("paper", "Paper", R.style.ThemeOverlay_Kitaab_Paper),
+        Entry("sky", "Sky", R.style.ThemeOverlay_Kitaab_Sky),
+        Entry("mint", "Mint", R.style.ThemeOverlay_Kitaab_Mint),
         Entry("ocean", "Ocean", R.style.ThemeOverlay_Kitaab_Ocean),
         Entry("forest", "Forest", R.style.ThemeOverlay_Kitaab_Forest),
         Entry("rose", "Rose", R.style.ThemeOverlay_Kitaab_Rose),
@@ -27,6 +31,16 @@ object Themes {
 
     /** The key of the theme chosen in Settings. */
     fun currentKey(context: Context): String = entry(PreferenceManager(context).colorTheme).key
+
+    /** Light / dark choice from Settings ("system", "light", "dark"). Changing it recreates the open screens. */
+    fun applyAppearance(context: Context) {
+        val mode = when (PreferenceManager(context).appearance) {
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        if (AppCompatDelegate.getDefaultNightMode() != mode) AppCompatDelegate.setDefaultNightMode(mode)
+    }
 
     /** Puts the chosen theme on the activity. Must run BEFORE super.onCreate. Returns the key that was applied. */
     fun apply(activity: Activity): String {

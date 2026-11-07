@@ -162,6 +162,23 @@
                 android:layout_marginBottom="12dp"/>
 
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Appearance" android:textSize="15sp"
+                android:textColor="?attr/kTextPrimary" android:layout_marginBottom="4dp"/>
+            <RadioGroup android:id="@+id/rgAppearance"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginBottom="12dp">
+                <RadioButton android:id="@+id/rbAppSystem" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="System" android:textColor="?attr/kTextPrimary"/>
+                <RadioButton android:id="@+id/rbAppLight" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="☀️ Light" android:textColor="?attr/kTextPrimary"/>
+                <RadioButton android:id="@+id/rbAppDark" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="🌙 Dark" android:textColor="?attr/kTextPrimary"/>
+            </RadioGroup>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="Colour theme" android:textSize="15sp"
                 android:textColor="?attr/kTextPrimary" android:layout_marginBottom="8dp"/>
             <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -171,7 +188,7 @@
                     android:orientation="horizontal"/>
             </HorizontalScrollView>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Every theme has a light and a dark version. They follow the dark theme switch below."
+                android:text="Every theme has a light and a dark version. Paper, Sky and Mint are the bright ones. The version shown follows Appearance above."
                 android:textSize="12sp" android:textColor="?attr/kTextSecondary"
                 android:layout_marginBottom="12dp"/>
 

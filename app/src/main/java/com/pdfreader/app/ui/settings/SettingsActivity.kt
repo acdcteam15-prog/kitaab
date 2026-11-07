@@ -56,6 +56,21 @@ class SettingsActivity : com.pdfreader.app.ui.base.BaseActivity() {
             )
         }
         buildThemePicker()
+        setupAppearance()
+    }
+
+    /** System / Light / Dark. Themes.applyAppearance recreates every open screen in the new mode. */
+    private fun setupAppearance() {
+        binding.rgAppearance.check(
+            when (prefs.appearance) { "light" -> R.id.rbAppLight; "dark" -> R.id.rbAppDark; else -> R.id.rbAppSystem }
+        )
+        binding.rgAppearance.setOnCheckedChangeListener { _, id ->
+            val v = when (id) { R.id.rbAppLight -> "light"; R.id.rbAppDark -> "dark"; else -> "system" }
+            if (prefs.appearance != v) {
+                prefs.appearance = v
+                com.pdfreader.app.ui.base.Themes.applyAppearance(this)
+            }
+        }
     }
 
     /** One tappable swatch per colour theme; the preview colours come from the theme itself. */

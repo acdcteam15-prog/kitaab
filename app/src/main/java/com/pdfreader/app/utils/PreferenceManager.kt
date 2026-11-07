@@ -49,6 +49,11 @@ class PreferenceManager(context: Context) {
         get() = prefs.getString("color_theme", "classic") ?: "classic"
         set(v) = prefs.edit().putString("color_theme", v).apply()
 
+    /** Light / dark choice made in Settings: "system" (follow the phone), "light" or "dark". */
+    var appearance: String
+        get() = prefs.getString("appearance", "system") ?: "system"
+        set(v) = prefs.edit().putString("appearance", v).apply()
+
     var downloadWifiOnly: Boolean
         get() = prefs.getBoolean("download_wifi_only", false)
         set(v) = prefs.edit().putBoolean("download_wifi_only", v).apply()

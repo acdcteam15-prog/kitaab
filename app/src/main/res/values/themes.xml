@@ -38,6 +38,8 @@
         <item name="android:colorBackground">?attr/kBackground</item>
         <item name="android:windowBackground">?attr/kBackground</item>
         <item name="android:statusBarColor">?attr/kPrimary</item>
+        <!-- The header is always a coloured band with white text, so the status bar icons stay light in every mode -->
+        <item name="android:windowLightStatusBar">false</item>
         <!-- Android 15+: apps targeting API 35 are drawn edge-to-edge by force, which put the toolbars under the
              status bar on screens that do not handle insets. Opt out so the system bars keep their own space. -->
         <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
@@ -110,6 +112,9 @@
         <item name="android:paddingEnd">@dimen/space_m</item>
         <item name="android:paddingTop">20dp</item>
         <item name="android:paddingBottom">8dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:drawableStart">@drawable/ic_section_bar</item>
+        <item name="android:drawablePadding">10dp</item>
         <item name="android:textAppearance">@style/Kitaab.Text.Section</item>
     </style>
     <style name="Widget.Kitaab.SheetLabel" parent="">

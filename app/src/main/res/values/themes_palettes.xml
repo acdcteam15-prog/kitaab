@@ -106,4 +106,67 @@
         <item name="kProgressTrack">#E4E4E4</item>
         <item name="kDivider">#E4E4E4</item>
     </style>
+    <style name="ThemeOverlay.Kitaab.Paper" parent="">
+        <item name="kPrimary">#9A5F2E</item>
+        <item name="kPrimaryDark">#7C4A21</item>
+        <item name="kPrimaryLight">#B87B45</item>
+        <item name="kBrand">#9A5F2E</item>
+        <item name="kOnBrand">#FFFFFF</item>
+        <item name="kAccent">#E9B44C</item>
+        <item name="kAccentDark">#9A6A12</item>
+        <item name="kSuccess">#2E9E5B</item>
+        <item name="kBackground">#FBF6EC</item>
+        <item name="kSurface">#FFFDF8</item>
+        <item name="kCardBg">#FFFFFF</item>
+        <item name="kSurfaceVariant">#F2E9D8</item>
+        <item name="kSkeleton">#EBE0CB</item>
+        <item name="kTextPrimary">#2B2113</item>
+        <item name="kTextSecondary">#7A6A52</item>
+        <item name="kTextOnDark">#FFFFFF</item>
+        <item name="kTextOnAccent">#2A1F0E</item>
+        <item name="kProgressTrack">#EADFC9</item>
+        <item name="kDivider">#EADFC9</item>
+    </style>
+    <style name="ThemeOverlay.Kitaab.Sky" parent="">
+        <item name="kPrimary">#2F6FDE</item>
+        <item name="kPrimaryDark">#2458B5</item>
+        <item name="kPrimaryLight">#5B93F0</item>
+        <item name="kBrand">#2F6FDE</item>
+        <item name="kOnBrand">#FFFFFF</item>
+        <item name="kAccent">#FFB020</item>
+        <item name="kAccentDark">#B07400</item>
+        <item name="kSuccess">#2E9E5B</item>
+        <item name="kBackground">#F4F8FF</item>
+        <item name="kSurface">#FFFFFF</item>
+        <item name="kCardBg">#FFFFFF</item>
+        <item name="kSurfaceVariant">#E4EEFF</item>
+        <item name="kSkeleton">#DCE8FB</item>
+        <item name="kTextPrimary">#10203A</item>
+        <item name="kTextSecondary">#5A6C8C</item>
+        <item name="kTextOnDark">#FFFFFF</item>
+        <item name="kTextOnAccent">#2A1E00</item>
+        <item name="kProgressTrack">#D8E4FA</item>
+        <item name="kDivider">#DCE6F8</item>
+    </style>
+    <style name="ThemeOverlay.Kitaab.Mint" parent="">
+        <item name="kPrimary">#1B9078</item>
+        <item name="kPrimaryDark">#146F5C</item>
+        <item name="kPrimaryLight">#3BB89E</item>
+        <item name="kBrand">#1B9078</item>
+        <item name="kOnBrand">#FFFFFF</item>
+        <item name="kAccent">#FF8A5B</item>
+        <item name="kAccentDark">#C2410C</item>
+        <item name="kSuccess">#2E9E5B</item>
+        <item name="kBackground">#F2FAF8</item>
+        <item name="kSurface">#FFFFFF</item>
+        <item name="kCardBg">#FFFFFF</item>
+        <item name="kSurfaceVariant">#DFF3EE</item>
+        <item name="kSkeleton">#D5EBE5</item>
+        <item name="kTextPrimary">#0F2A25</item>
+        <item name="kTextSecondary">#54766E</item>
+        <item name="kTextOnDark">#FFFFFF</item>
+        <item name="kTextOnAccent">#2A140B</item>
+        <item name="kProgressTrack">#D2EAE3</item>
+        <item name="kDivider">#D8EBE6</item>
+    </style>
 </resources>
