@@ -3,7 +3,7 @@
 # Kotlin (2.4.21) and KSP (2.3.13) are set in the root build.gradle.kts (buildscript classpath, see there).
 
 [versions]
-agp                  = "9.4.0"
+agp                  = "9.5.1"
 googleServices       = "4.5.0"
 firebaseBom          = "35.0.1"
 coreKtx              = "1.19.1"
