@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.pdfreader.app.utils.PreferenceManager
+import com.pdfreader.app.utils.ReaderPrefs
 import java.util.Collections
 import java.util.WeakHashMap
 
@@ -42,7 +42,7 @@ object TextStyle {
 
     /** Changes when the user picks another style — screens compare it to know when to redraw. */
     fun currentKey(ctx: Context): String {
-        val p = PreferenceManager(ctx)
+        val p = ReaderPrefs(ctx)
         return p.fontFamily + "|" + p.lineSpacing
     }
 
@@ -51,7 +51,7 @@ object TextStyle {
     /** Applies the chosen style to [root] and everything below it (also list rows as they appear). */
     fun apply(root: View?, ctx: Context) {
         if (root == null) return
-        val p = PreferenceManager(ctx)
+        val p = ReaderPrefs(ctx)
         val family = fonts.firstOrNull { it.key == p.fontFamily }?.family
         val spacing = p.lineSpacing
         if (family == null && spacing == 1f) return

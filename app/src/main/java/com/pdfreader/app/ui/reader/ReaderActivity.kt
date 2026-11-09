@@ -55,6 +55,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private lateinit var binding: ActivityReaderBinding
     private lateinit var prefs: PreferenceManager
+    private val extras by lazy { com.pdfreader.app.utils.ReaderPrefs(this) }
     private lateinit var progressRepo: ProgressRepository
     private lateinit var wakeLock: WakeLockManager
     private lateinit var bookmarkAdapter: BookmarkAdapter
@@ -132,7 +133,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         wakeLock         = WakeLockManager(this)
         isRotationLocked = prefs.lockRotation
         profile          = profileStore.load(bookId) ?: CropProfile(bookId)
-        timeGoalToastShown = prefs.dailyMinuteGoal > 0 && prefs.msToday >= prefs.dailyMinuteGoal * 60_000L
+        timeGoalToastShown = extras.dailyMinuteGoal > 0 && extras.msToday >= extras.dailyMinuteGoal * 60_000L
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply { title = com.pdfreader.app.data.model.prettyTitle(bookName); setDisplayHomeAsUpEnabled(true) }
@@ -1314,13 +1315,13 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         val pct = ((currentPage + 1f) / totalPages * 100).toInt()
         val eta = computeEta()
         val left = (totalPages - 1 - currentPage).coerceAtLeast(0)
-        binding.tvPageInfo.text = when (prefs.readerInfoMode) {
+        binding.tvPageInfo.text = when (extras.readerInfoMode) {
             1 -> {
                 val t = if (eta != null) "~${fmtMin(eta)} left" else "time left: reading a bit more to estimate…"
                 "$left ${if (left == 1) "page" else "pages"} left  •  $t"
             }
             2 -> {
-                val goal = prefs.dailyMinuteGoal
+                val goal = extras.dailyMinuteGoal
                 val today = todayMs() / 60_000
                 val goalPart = if (goal > 0) "$today / $goal min" + (if (today >= goal) " ✓" else "") else "$today min"
                 "⏱ ${fmtClock(activeSessionMs())}  •  Today $goalPart"
@@ -1338,7 +1339,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     /** Tap the info line under the seekbar: page → time left → timer & goal. */
     private fun cycleInfoMode() {
-        prefs.readerInfoMode = (prefs.readerInfoMode + 1) % 3
+        extras.readerInfoMode = (extras.readerInfoMode + 1) % 3
         updateProgressUi()
         scheduleAutoHide()
     }
@@ -1358,10 +1359,10 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     private var tickJob: Job? = null
 
     private fun activeSessionMs() = sessionActiveMs + (System.currentTimeMillis() - lastCheckpointMs).coerceAtLeast(0)
-    private fun todayMs() = prefs.msToday + (System.currentTimeMillis() - lastCheckpointMs).coerceAtLeast(0)
+    private fun todayMs() = extras.msToday + (System.currentTimeMillis() - lastCheckpointMs).coerceAtLeast(0)
 
     private fun checkTimeGoal() {
-        val g = prefs.dailyMinuteGoal
+        val g = extras.dailyMinuteGoal
         if (g <= 0 || timeGoalToastShown) return
         if (todayMs() >= g * 60_000L) {
             timeGoalToastShown = true
@@ -1372,13 +1373,13 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     private fun showTimeGoalDialog() {
         val opts = intArrayOf(0, 10, 15, 20, 30, 45, 60, 90)
         val labels = opts.map { if (it == 0) "No time goal" else "$it minutes a day" }.toTypedArray()
-        val cur = opts.indexOf(prefs.dailyMinuteGoal).coerceAtLeast(0)
+        val cur = opts.indexOf(extras.dailyMinuteGoal).coerceAtLeast(0)
         AlertDialog.Builder(this)
             .setTitle("🎯 Daily goal · ${todayMs() / 60_000} min today")
             .setSingleChoiceItems(labels, cur) { d, i ->
-                prefs.dailyMinuteGoal = opts[i]
+                extras.dailyMinuteGoal = opts[i]
                 timeGoalToastShown = opts[i] > 0 && todayMs() >= opts[i] * 60_000L
-                if (opts[i] > 0) prefs.readerInfoMode = 2
+                if (opts[i] > 0) extras.readerInfoMode = 2
                 updateProgressUi()
                 d.dismiss()
                 Toast.makeText(this,
@@ -1393,11 +1394,11 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private fun showTextStyleDialog() {
         val fonts = com.pdfreader.app.ui.base.TextStyle.fonts
-        val cur = fonts.indexOfFirst { it.key == prefs.fontFamily }.coerceAtLeast(0)
+        val cur = fonts.indexOfFirst { it.key == extras.fontFamily }.coerceAtLeast(0)
         AlertDialog.Builder(this)
             .setTitle("🔤 Font")
             .setSingleChoiceItems(fonts.map { it.label }.toTypedArray(), cur) { d, i ->
-                prefs.fontFamily = fonts[i].key
+                extras.fontFamily = fonts[i].key
                 d.dismiss()
                 showSpacingDialog()
             }
@@ -1407,11 +1408,11 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private fun showSpacingDialog() {
         val sp = com.pdfreader.app.ui.base.TextStyle.spacings
-        val cur = sp.indexOfFirst { kotlin.math.abs(it.value - prefs.lineSpacing) < 0.01f }.coerceAtLeast(0)
+        val cur = sp.indexOfFirst { kotlin.math.abs(it.value - extras.lineSpacing) < 0.01f }.coerceAtLeast(0)
         AlertDialog.Builder(this)
             .setTitle("↕ Line spacing")
             .setSingleChoiceItems(sp.map { it.label }.toTypedArray(), cur) { d, i ->
-                prefs.lineSpacing = sp[i].value
+                extras.lineSpacing = sp[i].value
                 d.dismiss()
                 recreate()
             }
@@ -1595,7 +1596,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         val delta = now - lastCheckpointMs
         lastCheckpointMs = now
         sessionActiveMs += delta
-        prefs.addMsToday(delta)
+        extras.addMsToday(delta)
         val page  = currentPage
         val total = totalPages
         ioScope.launch(saveDispatcher) {   // single-threaded → saves apply in call order
@@ -1613,7 +1614,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         tickJob = lifecycleScope.launch {
             while (isActive) {
                 delay(20_000)
-                if (prefs.readerInfoMode != 0) updateProgressUi()
+                if (extras.readerInfoMode != 0) updateProgressUi()
                 checkTimeGoal()
             }
         }
@@ -1768,8 +1769,8 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         row("🔢", "Go to page") { showJumpToPageDialog() }
         row("📑", "Bookmarks") { toggleBookmarkPanel(true) }
         row("🎯", "Reading goal & timer",
-            if (prefs.dailyMinuteGoal > 0) "${todayMs() / 60_000} / ${prefs.dailyMinuteGoal} min" else "Off") { showTimeGoalDialog() }
-        row("🔤", "Text style", com.pdfreader.app.ui.base.TextStyle.fontLabel(prefs.fontFamily)) { showTextStyleDialog() }
+            if (extras.dailyMinuteGoal > 0) "${todayMs() / 60_000} / ${extras.dailyMinuteGoal} min" else "Off") { showTimeGoalDialog() }
+        row("🔤", "Text style", com.pdfreader.app.ui.base.TextStyle.fontLabel(extras.fontFamily)) { showTextStyleDialog() }
         row("⏱", "Sleep timer", if (sleepTimerMinutes > 0) "$sleepTimerMinutes min" else "Off") { showSleepTimerDialog() }
         if (prefs.screenBrightness >= 0f || prefs.readerDim > 0f)
             row("☀️", "Brightness: follow phone") {
