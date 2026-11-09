@@ -132,6 +132,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         wakeLock         = WakeLockManager(this)
         isRotationLocked = prefs.lockRotation
         profile          = profileStore.load(bookId) ?: CropProfile(bookId)
+        timeGoalToastShown = prefs.dailyMinuteGoal > 0 && prefs.msToday >= prefs.dailyMinuteGoal * 60_000L
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply { title = com.pdfreader.app.data.model.prettyTitle(bookName); setDisplayHomeAsUpEnabled(true) }
@@ -270,8 +271,8 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         binding.seekbarPages.layoutDirection =
             if (prefs.rtlPageOrder) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
 
+        analyzer = PageAnalyzer(file)      // also used outside book mode (footnote line)
         if (bookMode) {
-            analyzer = PageAnalyzer(file)
             pageCache = PageBitmapCache(file, { surroundColor() }, resources.displayMetrics.density).also { pc ->
                 pc.filter = ScanFilter.colorFilter(curSpec)
                 pc.look = { page -> lookFor(page) }
@@ -301,7 +302,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
                 restoreZoom()
                 pageCache?.setViewSize(binding.curlLayout.width, binding.curlLayout.height)
                 pageCache?.prefetch(currentPage, pages)
-                if (bookMode) initScanTools()
+                if (bookMode) initScanTools() else initPlainTools()
             })
             .onRender(OnRenderListener { _ -> restoreZoom() })
             .onPageChange(OnPageChangeListener { displayPage, count ->
@@ -312,6 +313,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
                 totalPages  = count
                 if (applyingCrop) return@OnPageChangeListener
                 if (cropOn || profile?.deskew == true) binding.pdfView.post { refreshPageLook() }
+                if (!isBookMode) analyzeAround(page)
                 pageCache?.prefetch(page, count)
                 updateProgressUi()
                 updateBookmarkIcon()
@@ -328,6 +330,12 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
             .onTap(OnTapListener { e -> handleTap(e); true })
             .onDrawAll(OnDrawListener { canvas, pw, ph, displayPage -> drawHighlights(canvas, pw, ph, displayPage) })
             .onLongPress(OnLongPressListener { event ->
+                // Long-press on the footer (the folded area) → move its line, in any reading mode
+                if (footerHit(event.x, event.y)) {
+                    binding.root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    startFootnoteEdit()
+                    return@OnLongPressListener
+                }
                 val yRatio = localToScreenY(event.x, event.y) / binding.pdfView.height.toFloat()
                 setPinAt(currentPage, yRatio.coerceIn(0f, 1f))
             })
@@ -769,7 +777,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     private fun refreshPageLook() {
         val pr = profile ?: return
         val an = analyzer
-        if (an == null || (!cropOn && !pr.deskew)) {
+        if (an == null || !isBookMode || (!cropOn && !pr.deskew)) {
             curCrop = null; layoutNow = null
             binding.pdfView.animate().cancel()
             binding.pdfView.rotation = 0f
@@ -816,22 +824,104 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     // ·· footnote fold: curtain, handle, sheet, manual line ··
 
+    // ·· footnote line in EVERY reading mode (book mode only adds the crop zoom on top) ··
+
+    /** Fold line (page fraction) of [page] as shown right now; -1 = nothing folded. */
+    private fun foldNow(page: Int): Float =
+        if (cropOn) (cropOf(page)?.foldY ?: -1f) else (profile?.manualFold(page) ?: -1f)
+
+    /** Area hidden behind the curtain of [page], for the footnote sheet. */
+    private fun footRectNow(page: Int): FloatArray? {
+        if (cropOn) return cropOf(page)?.footRect
+        val fy = foldNow(page)
+        if (fy <= 0f) return null
+        val b = analyzer?.peek(page)?.box
+        val l = b?.get(0) ?: 0.04f; val r = b?.get(2) ?: 0.96f
+        val fb = ((b?.get(3) ?: 1f) + 0.01f).coerceAtMost(1f)
+        return if (fb - fy > 0.012f) floatArrayOf(l, fy, r, fb) else null
+    }
+
+    /** Is the "Footnote fold" switch really doing something in the current mode? */
+    private fun foldActive(): Boolean {
+        val pr = profile ?: return false
+        if (!pr.fold) return false
+        return cropOn || pr.fixedFold > 0f || pr.overrides.isNotEmpty()
+    }
+
+    /** Screen y (PDFView coordinates) of a page fraction on the current page; null if not drawn yet. */
+    private fun fracToScreenY(f: Float): Float? {
+        layoutNow?.takeIf { cropOn }?.let { return it.screenY(f) }
+        val r = freshPageRects()[currentPage] ?: return null
+        return r.top + f * r.height()
+    }
+
+    private fun screenYToFrac(y: Float): Float? {
+        layoutNow?.takeIf { cropOn }?.let { return it.pageFracY(y) }
+        val r = freshPageRects()[currentPage] ?: return null
+        return if (r.height() > 0f) (y - r.top) / r.height() else null
+    }
+
+    /** A finger held on the footer: on the folded area or within a thumb's width above its line. */
+    private fun footerHit(x: Float, y: Float): Boolean {
+        if (highlightMode || editingFootnote) return false
+        val fy = foldNow(currentPage)
+        if (fy <= 0f) return false
+        val r = freshPageRects()[currentPage] ?: return false
+        if (x < r.left || x > r.right) return false
+        val line = r.top + fy * r.height()
+        val pad = 36f * resources.displayMetrics.density
+        return y >= line - pad && y <= r.bottom
+    }
+
+    /** Looks at the pages around [page] so their footnote separator is known (plain reading modes). */
+    private fun analyzeAround(page: Int) {
+        val an = analyzer ?: return
+        lifecycleScope.launch {
+            for (p in intArrayOf(page, page + 1, page - 1)) {
+                if (p < 0 || (totalPages > 0 && p >= totalPages)) continue
+                an.info(p)
+                if (p == page && !cropOn) binding.pdfView.invalidate()
+            }
+        }
+    }
+
+    /** Book mode brings crop + tuning (initScanTools); other modes only need the synced profile. */
+    private fun initPlainTools() {
+        analyzeAround(currentPage)
+        lifecycleScope.launch {
+            val local = profile ?: return@launch
+            val remote = profileStore.sync(local, ownerName) ?: return@launch
+            profile = remote
+            applyReadingTheme()
+            binding.pdfView.invalidate()
+        }
+    }
+
     /** Called from the PDFView draw pass for every visible page (canvas is at the page's top-left). */
     private fun drawFold(canvas: android.graphics.Canvas, pw: Float, ph: Float, real: Int, ox: Float, oy: Float) {
         if (real == currentPage) foldHandle.setEmpty()
-        if (!cropOn || editingFootnote) return
-        val crop = cropOf(real) ?: return
-        val box = crop.box ?: return
-        if (crop.foldY <= 0f) return
+        if (editingFootnote) return
+        val fy: Float; val cx: Float
+        if (cropOn) {
+            val crop = cropOf(real) ?: return
+            val box = crop.box ?: return
+            if (crop.foldY <= 0f) return
+            fy = crop.foldY; cx = (box[0] + box[2]) / 2f
+        } else {
+            fy = profile?.manualFold(real) ?: -1f
+            if (fy <= 0f) return
+            val b = analyzer?.peek(real)?.box
+            cx = if (b != null) (b[0] + b[2]) / 2f else 0.5f
+        }
         val out = if (real == currentPage) foldHandleTmp else null
-        FoldPainter.draw(canvas, 0f, 0f, pw, ph, crop.foldY, (box[0] + box[2]) / 2f,
+        FoldPainter.draw(canvas, 0f, 0f, pw, ph, fy, cx,
             surroundColor(), resources.displayMetrics.density, { fixColor(it) }, out)
         if (out != null) foldHandle.set(out.left + ox, out.top + oy, out.right + ox, out.bottom + oy)
     }
 
     /** Slide-up sheet with the folded footnotes of the current page, rendered sharp. */
     private fun showFootnotes() {
-        val fr = curCrop?.footRect
+        val fr = footRectNow(currentPage)
         if (fr == null) {
             Toast.makeText(this, "No folded footnotes on this page", Toast.LENGTH_SHORT).show()
             return
@@ -875,25 +965,39 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     }
 
     private fun startFootnoteEdit() {
-        val pr = profile ?: return
-        val lay = layoutNow
-        val base = pr.boxFor(currentPage)
-        if (!cropOn || lay == null || base == null) {
-            Toast.makeText(this, "Turn on Crop margins first", Toast.LENGTH_SHORT).show()
+        val an = analyzer
+        if (!cropOn && an != null && an.peek(currentPage) == null) {
+            // Plain reading mode: look at the page first so the line starts at its separator
+            val page = currentPage
+            lifecycleScope.launch { an.info(page); if (page == currentPage) beginFootnoteEdit() }
             return
         }
+        beginFootnoteEdit()
+    }
+
+    private fun beginFootnoteEdit() {
+        val pr = profile ?: return
+        val base = if (cropOn) pr.boxFor(currentPage) else null
         val info = analyzer?.peek(currentPage)
-        val start = curCrop?.foldY?.takeIf { it > 0f }
+        val topFrac = base?.get(1) ?: info?.box?.get(1) ?: 0f
+        val start = foldNow(currentPage).takeIf { it > 0f }
             ?: info?.sepY?.takeIf { it > 0f }?.plus(0.004f)
-            ?: (base[1] + (base[3] - base[1]) * 0.8f)
+            ?: (topFrac + (1f - topFrac) * 0.8f)
+        val minS = fracToScreenY(topFrac + 0.10f)
+        val maxS = fracToScreenY(0.995f)
+        val startS = fracToScreenY(start)
+        if (minS == null || maxS == null || startS == null) {
+            Toast.makeText(this, "Page not ready yet — try again", Toast.LENGTH_SHORT).show()
+            return
+        }
         editingFootnote = true
         exitFootnoteEditOnBack.isEnabled = true
         binding.pdfView.animate().cancel()
         binding.pdfView.rotation = 0f          // the line maths assumes an upright page
         val ed = binding.footnoteEditor
-        ed.minY = lay.screenY(base[1] + 0.10f)
-        ed.maxY = minOf(lay.screenY(0.995f), binding.pdfView.height.toFloat())
-        ed.lineY = lay.screenY(start)
+        ed.minY = minS
+        ed.maxY = minOf(maxS, binding.pdfView.height.toFloat())
+        ed.lineY = startS
         ed.visibility = View.VISIBLE
         binding.footnoteBar.visibility = View.VISIBLE
         if (isUiVisible) toggleUi()
@@ -909,9 +1013,10 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     }
 
     private fun commitFootnoteLine(mode: Int) {
-        val pr = profile; val lay = layoutNow
-        if (pr == null || lay == null) { stopFootnoteEdit(); return }
-        val y = lay.pageFracY(binding.footnoteEditor.lineY).coerceIn(0.05f, 0.995f)
+        val pr = profile
+        val frac = screenYToFrac(binding.footnoteEditor.lineY)
+        if (pr == null || frac == null) { stopFootnoteEdit(); return }
+        val y = frac.coerceIn(0.05f, 0.995f)
         when (mode) {
             FN_THIS -> pr.overrides[currentPage] = y
             FN_ALL  -> pr.fixedFold = y
@@ -935,14 +1040,14 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private fun toggleFold() {
         val pr = profile ?: return
-        if (!cropOn) {
-            Toast.makeText(this, "Turn on Crop margins first", Toast.LENGTH_SHORT).show(); return
-        }
         pr.fold = !pr.fold
         saveProfile(); invalidateLook(); refreshPageLook()
-        Toast.makeText(this,
-            if (pr.fold) "📎 Footnotes folded — tap “▲ Footnotes” to read them" else "Footnotes shown",
-            Toast.LENGTH_SHORT).show()
+        binding.pdfView.invalidate()
+        Toast.makeText(this, when {
+            !pr.fold -> "Footnotes shown"
+            cropOn   -> "📎 Footnotes folded — tap “▲ Footnotes” to read them"
+            else     -> "📎 Footnote fold on — long-press a footer to set its line"
+        }, Toast.LENGTH_SHORT).show()
     }
 
     private fun cycleClean() {
@@ -1084,6 +1189,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
     private fun setupBottomBar() {
         seekPreview = SeekPreviewRenderer(File(localPath))
+        binding.tvPageInfo.setOnClickListener { cycleInfoMode() }
         binding.seekbarPages.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 if (!fromUser || isUpdatingSeekbar) return
@@ -1207,20 +1313,119 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         if (totalPages == 0) return
         val pct = ((currentPage + 1f) / totalPages * 100).toInt()
         val eta = computeEta()
-        val etaStr = if (eta != null) "  •  ~${eta}min left" else ""
-        binding.tvPageInfo.text  = "Page ${currentPage + 1} / $totalPages  •  $pct%$etaStr"
+        val left = (totalPages - 1 - currentPage).coerceAtLeast(0)
+        binding.tvPageInfo.text = when (prefs.readerInfoMode) {
+            1 -> {
+                val t = if (eta != null) "~${fmtMin(eta)} left" else "time left: reading a bit more to estimate…"
+                "$left ${if (left == 1) "page" else "pages"} left  •  $t"
+            }
+            2 -> {
+                val goal = prefs.dailyMinuteGoal
+                val today = todayMs() / 60_000
+                val goalPart = if (goal > 0) "$today / $goal min" + (if (today >= goal) " ✓" else "") else "$today min"
+                "⏱ ${fmtClock(activeSessionMs())}  •  Today $goalPart"
+            }
+            else -> {
+                val etaStr = if (eta != null) "  •  ~${fmtMin(eta)} left" else ""
+                "Page ${currentPage + 1} / $totalPages  •  $pct%$etaStr"
+            }
+        }
         isUpdatingSeekbar = true
         binding.seekbarPages.max      = totalPages - 1
         binding.seekbarPages.progress = currentPage
         isUpdatingSeekbar = false
     }
 
+    /** Tap the info line under the seekbar: page → time left → timer & goal. */
+    private fun cycleInfoMode() {
+        prefs.readerInfoMode = (prefs.readerInfoMode + 1) % 3
+        updateProgressUi()
+        scheduleAutoHide()
+    }
+
+    private fun fmtMin(m: Int): String = if (m >= 60) "${m / 60}h ${m % 60}m" else "$m min"
+
+    private fun fmtClock(ms: Long): String {
+        val sec = ms / 1000
+        val h = sec / 3600; val m = (sec % 3600) / 60; val s = sec % 60
+        return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+    }
+
+    // ── Reading timer & daily time goal ───────────────────────────────────────
+
+    private var sessionActiveMs = 0L           // reading time of this visit, background excluded
+    private var timeGoalToastShown = false
+    private var tickJob: Job? = null
+
+    private fun activeSessionMs() = sessionActiveMs + (System.currentTimeMillis() - lastCheckpointMs).coerceAtLeast(0)
+    private fun todayMs() = prefs.msToday + (System.currentTimeMillis() - lastCheckpointMs).coerceAtLeast(0)
+
+    private fun checkTimeGoal() {
+        val g = prefs.dailyMinuteGoal
+        if (g <= 0 || timeGoalToastShown) return
+        if (todayMs() >= g * 60_000L) {
+            timeGoalToastShown = true
+            Toast.makeText(this, "🎯 Daily reading goal reached — $g min!", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun showTimeGoalDialog() {
+        val opts = intArrayOf(0, 10, 15, 20, 30, 45, 60, 90)
+        val labels = opts.map { if (it == 0) "No time goal" else "$it minutes a day" }.toTypedArray()
+        val cur = opts.indexOf(prefs.dailyMinuteGoal).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle("🎯 Daily goal · ${todayMs() / 60_000} min today")
+            .setSingleChoiceItems(labels, cur) { d, i ->
+                prefs.dailyMinuteGoal = opts[i]
+                timeGoalToastShown = opts[i] > 0 && todayMs() >= opts[i] * 60_000L
+                if (opts[i] > 0) prefs.readerInfoMode = 2
+                updateProgressUi()
+                d.dismiss()
+                Toast.makeText(this,
+                    if (opts[i] > 0) "Goal set — tap the line under the seekbar to switch what it shows"
+                    else "Time goal off", Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    // ── Text style (font + line spacing, whole app) ───────────────────────────
+
+    private fun showTextStyleDialog() {
+        val fonts = com.pdfreader.app.ui.base.TextStyle.fonts
+        val cur = fonts.indexOfFirst { it.key == prefs.fontFamily }.coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle("🔤 Font")
+            .setSingleChoiceItems(fonts.map { it.label }.toTypedArray(), cur) { d, i ->
+                prefs.fontFamily = fonts[i].key
+                d.dismiss()
+                showSpacingDialog()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showSpacingDialog() {
+        val sp = com.pdfreader.app.ui.base.TextStyle.spacings
+        val cur = sp.indexOfFirst { kotlin.math.abs(it.value - prefs.lineSpacing) < 0.01f }.coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle("↕ Line spacing")
+            .setSingleChoiceItems(sp.map { it.label }.toTypedArray(), cur) { d, i ->
+                prefs.lineSpacing = sp[i].value
+                d.dismiss()
+                recreate()
+            }
+            .setNegativeButton("Keep") { _, _ -> recreate() }
+            .show()
+    }
+
     // ── ETA to finish ─────────────────────────────────────────────────────────
 
     private fun computeEta(): Int? {
         if (currentPage <= 1 || totalPages <= 0) return null
-        val sessionMs = System.currentTimeMillis() - sessionStartMs
-        if (sessionMs < 60_000) return null
+        val sessionMs = activeSessionMs()
+        // Earlier reading of this book is enough to estimate straight away
+        if (sessionMs < 60_000 && allTimeMsAtOpen < 60_000) return null
         val totalMs   = (allTimeMsAtOpen + sessionMs).toFloat()
         val msPerPage = totalMs / currentPage.toFloat().coerceAtLeast(1f)
         if (msPerPage < 3_000 || msPerPage > 600_000) return null
@@ -1389,6 +1594,8 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         val now   = System.currentTimeMillis()
         val delta = now - lastCheckpointMs
         lastCheckpointMs = now
+        sessionActiveMs += delta
+        prefs.addMsToday(delta)
         val page  = currentPage
         val total = totalPages
         ioScope.launch(saveDispatcher) {   // single-threaded → saves apply in call order
@@ -1402,6 +1609,14 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     }
 
     private fun startPeriodicCheckpoint() {
+        tickJob?.cancel()
+        tickJob = lifecycleScope.launch {
+            while (isActive) {
+                delay(20_000)
+                if (prefs.readerInfoMode != 0) updateProgressUi()
+                checkTimeGoal()
+            }
+        }
         checkpointJob?.cancel()
         checkpointJob = lifecycleScope.launch {
             while (isActive) {
@@ -1455,7 +1670,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         // Header
         sheet.tvMenuTitle.text = com.pdfreader.app.data.model.prettyTitle(bookName)
         val pct = if (totalPages > 0) ((currentPage + 1f) / totalPages * 100).toInt() else 0
-        val eta = computeEta()?.let { "  •  ~$it min left" } ?: ""
+        val eta = computeEta()?.let { "  •  ~${fmtMin(it)} left" } ?: ""
         sheet.tvMenuSub.text = "Page ${currentPage + 1} of $totalPages  •  $pct%$eta"
         sheet.menuProgress.setProgressCompat(pct, false)
 
@@ -1507,7 +1722,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
 
         // Scans & footnotes
         val level = profile?.cleanLevel ?: 0
-        tile("📎", "Footnote\nfold", cropOn && profile?.fold == true, sheet.layoutToggles2) { toggleFold() }
+        tile("📎", "Footnote\nfold", foldActive(), sheet.layoutToggles2) { toggleFold() }
         tile("🧼", "Clean scan\n" + listOf("off", "light", "strong")[level], level > 0, sheet.layoutToggles2) { cycleClean() }
         tile("📐", "Deskew", isBookMode && profile?.deskew == true, sheet.layoutToggles2) { toggleDeskew() }
         tile("🌓", "Dark\npages", prefs.invertPages, sheet.layoutToggles2) { toggleInvertPages() }
@@ -1546,12 +1761,15 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
         if (pinPage >= 0) row("📍", "Go to my marker", "p. ${pinPage + 1}") { jumpToPin() }
         row("🖍", "Highlight") { setHighlightMode(true) }
         if (highlights.isNotEmpty()) row("📝", "Highlights & notes", "${highlights.size}") { showHighlightsList() }
-        if (cropOn && (curCrop?.foldY ?: -1f) > 0f) row("📎", "Footnotes of this page") { showFootnotes() }
-        if (cropOn) row("📏", "Adjust footnote line", "this page") { startFootnoteEdit() }
-        if (cropOn && profile?.overrides?.containsKey(currentPage) == true) row("↺", "Auto footnote line", "this page") { resetFootnoteLine() }
+        if (foldNow(currentPage) > 0f) row("📎", "Footnotes of this page") { showFootnotes() }
+        row("📏", "Adjust footnote line", "or long-press the footer") { startFootnoteEdit() }
+        if (profile?.overrides?.containsKey(currentPage) == true) row("↺", "Auto footnote line", "this page") { resetFootnoteLine() }
         if (cropOn) row("🔄", "Re-detect crop", "whole book") { redetectCrop() }
         row("🔢", "Go to page") { showJumpToPageDialog() }
         row("📑", "Bookmarks") { toggleBookmarkPanel(true) }
+        row("🎯", "Reading goal & timer",
+            if (prefs.dailyMinuteGoal > 0) "${todayMs() / 60_000} / ${prefs.dailyMinuteGoal} min" else "Off") { showTimeGoalDialog() }
+        row("🔤", "Text style", com.pdfreader.app.ui.base.TextStyle.fontLabel(prefs.fontFamily)) { showTextStyleDialog() }
         row("⏱", "Sleep timer", if (sleepTimerMinutes > 0) "$sleepTimerMinutes min" else "Off") { showSleepTimerDialog() }
         if (prefs.screenBrightness >= 0f || prefs.readerDim > 0f)
             row("☀️", "Brightness: follow phone") {
@@ -1563,6 +1781,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
             startActivity(android.content.Intent(this, com.pdfreader.app.ui.settings.SettingsActivity::class.java))
         }
 
+        com.pdfreader.app.ui.base.TextStyle.apply(sheet.root, this)
         dialog.show()
     }
 
@@ -1630,6 +1849,7 @@ class ReaderActivity : com.pdfreader.app.ui.base.BaseActivity() {
     override fun onPause() {
         super.onPause()
         checkpointJob?.cancel()
+        tickJob?.cancel()
         saveZoom()
         prefs.updateStreak()
         checkpoint(push = true)

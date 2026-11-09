@@ -70,6 +70,17 @@ class CropProfile(val bookId: String) {
         return PageCrop(box, if (foot != null) fy else -1f, skew, foot)
     }
 
+    /**
+     * Fold line for [page] when crop is OFF (any reading mode): only lines set by hand count.
+     * -1 = nothing folded on this page.
+     */
+    fun manualFold(page: Int): Float = when {
+        !fold -> -1f
+        overrides.containsKey(page) -> (overrides[page] ?: -1f).takeIf { it > 0f } ?: -1f
+        fixedFold > 0f -> fixedFold
+        else -> -1f
+    }
+
     fun clearManual() { overrides.clear(); fixedFold = -1f }
 
     fun toJson(): String {

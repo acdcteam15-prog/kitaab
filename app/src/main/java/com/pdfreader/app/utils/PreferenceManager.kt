@@ -49,11 +49,6 @@ class PreferenceManager(context: Context) {
         get() = prefs.getString("color_theme", "classic") ?: "classic"
         set(v) = prefs.edit().putString("color_theme", v).apply()
 
-    /** Light / dark choice made in Settings: "system" (follow the phone), "light" or "dark". */
-    var appearance: String
-        get() = prefs.getString("appearance", "system") ?: "system"
-        set(v) = prefs.edit().putString("appearance", v).apply()
-
     var downloadWifiOnly: Boolean
         get() = prefs.getBoolean("download_wifi_only", false)
         set(v) = prefs.edit().putBoolean("download_wifi_only", v).apply()
@@ -101,6 +96,38 @@ class PreferenceManager(context: Context) {
         val base = if (prefs.getLong("pages_today_day", -1) == today) prefs.getInt("pages_today", 0) else 0
         prefs.edit().putLong("pages_today_day", today).putInt("pages_today", base + n).apply()
     }
+
+    // ── Daily reading-time goal + reader info line ────────────────────────────
+    /** Minutes of reading wanted per day; 0 = no time goal. */
+    var dailyMinuteGoal: Int
+        get() = prefs.getInt("daily_minute_goal", 0)
+        set(v) = prefs.edit().putInt("daily_minute_goal", v).apply()
+
+    /** Milliseconds read today (resets at midnight). */
+    val msToday: Long
+        get() = if (prefs.getLong("ms_today_day", -1) == java.time.LocalDate.now().toEpochDay())
+            prefs.getLong("ms_today", 0L) else 0L
+
+    fun addMsToday(ms: Long) {
+        if (ms <= 0) return
+        val today = java.time.LocalDate.now().toEpochDay()
+        val base = if (prefs.getLong("ms_today_day", -1) == today) prefs.getLong("ms_today", 0L) else 0L
+        prefs.edit().putLong("ms_today_day", today).putLong("ms_today", base + ms).apply()
+    }
+
+    /** What the reader's bottom info line shows: 0 page + %, 1 pages/time left, 2 timer + goal. */
+    var readerInfoMode: Int
+        get() = prefs.getInt("reader_info_mode", 0)
+        set(v) = prefs.edit().putInt("reader_info_mode", v).apply()
+
+    // ── Text style (app-wide) ─────────────────────────────────────────────────
+    var fontFamily: String
+        get() = prefs.getString("font_family", "DEFAULT") ?: "DEFAULT"
+        set(v) = prefs.edit().putString("font_family", v).apply()
+
+    var lineSpacing: Float
+        get() = prefs.getFloat("line_spacing", 1f)
+        set(v) = prefs.edit().putFloat("line_spacing", v).apply()
 
     var goalReminderEnabled: Boolean
         get() = prefs.getBoolean("goal_reminder", false)
